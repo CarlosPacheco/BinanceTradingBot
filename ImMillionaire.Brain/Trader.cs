@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Trady.Analysis;
 using Trady.Analysis.Extension;
@@ -46,18 +47,24 @@ namespace ImMillionaire.Brain
 
         private Candlestick1HoursData Candlestick1HoursData { get; set; }
 
-        private Candlestick4HoursData Candlestick4HoursData { get; set; }
+        //   private Candlestick4HoursData Candlestick4HoursData { get; set; }
 
-        private Candlestick1DaysData Candlestick1DaysData { get; set; }
+        //  private Candlestick1DaysData Candlestick1DaysData { get; set; }
 
         private long Ping { get; set; }
 
         private BinanceExchangeInfo BinanceExchangeInfo { get; set; }
 
+        private BinanceSymbol BinanceSymbol { get; set; }
+
         decimal lastBid = 0m;
         decimal lastAsk = 0m;
+
+        BinanceStreamTrade BinanceStreamTrade;
         string listenKey;
         IBinanceBookPrice lastBookTicker = null;
+
+        private bool BotHasStarted { get; set; }
 
         public Trader()
         {
@@ -86,9 +93,17 @@ namespace ImMillionaire.Brain
 
         public void Start()
         {
+            BotHasStarted = false;
+            Utils.Log("Bot started init", ConsoleColor.Green);
+
             GetCandlestickData();
 
-            var successDepth = SocketClient.SubscribeToOrderBookUpdates(Symbol, 1000, (BinanceEventOrderBook data) =>
+            SocketClient.SubscribeToTradeUpdates(Symbol, (BinanceStreamTrade data) =>
+            {
+                BinanceStreamTrade = data;
+            });
+
+            var successDepth = SocketClient.SubscribeToOrderBookUpdates(Symbol, 100, (BinanceEventOrderBook data) =>
             {
                 if (data.Bids.Any()) lastBid = data.Bids.First().Price;
 
@@ -121,23 +136,23 @@ namespace ImMillionaire.Brain
                 Candlestick1HoursData.ema120 = candlestick.Ema(120).Last().Tick;
             });
 
-            Candlestick4HoursData = new Candlestick4HoursData();
-            SubscribeToKlineUpdates(Candlestick4Hours, KlineInterval.FourHour,
-            (IList<IOhlcv> candlestick, Candlestick candle) =>
-            {
-                Candlestick4HoursData.ema10 = candlestick.Ema(10).Last().Tick;
-                Candlestick4HoursData.rsi14 = candlestick.Rsi(14).Last().Tick;
-                Candlestick4HoursData.ema60 = candlestick.Ema(60).Last().Tick;
-            });
+            //Candlestick4HoursData = new Candlestick4HoursData();
+            //SubscribeToKlineUpdates(Candlestick4Hours, KlineInterval.FourHour,
+            //(IList<IOhlcv> candlestick, Candlestick candle) =>
+            //{
+            //    Candlestick4HoursData.ema10 = candlestick.Ema(10).Last().Tick;
+            //    Candlestick4HoursData.rsi14 = candlestick.Rsi(14).Last().Tick;
+            //    Candlestick4HoursData.ema60 = candlestick.Ema(60).Last().Tick;
+            //});
 
-            Candlestick1DaysData = new Candlestick1DaysData();
-            SubscribeToKlineUpdates(Candlestick1Day, KlineInterval.OneDay,
-            (IList<IOhlcv> candlestick, Candlestick candle) =>
-            {
-                Candlestick1DaysData.ema10 = candlestick.Ema(10).Last().Tick;
-                Candlestick1DaysData.rsi14 = candlestick.Rsi(14).Last().Tick;
-                Candlestick1DaysData.ema25 = candlestick.Ema(25).Last().Tick;
-            });
+            //Candlestick1DaysData = new Candlestick1DaysData();
+            //SubscribeToKlineUpdates(Candlestick1Day, KlineInterval.OneDay,
+            //(IList<IOhlcv> candlestick, Candlestick candle) =>
+            //{
+            //    Candlestick1DaysData.ema10 = candlestick.Ema(10).Last().Tick;
+            //    Candlestick1DaysData.rsi14 = candlestick.Rsi(14).Last().Tick;
+            //    Candlestick1DaysData.ema25 = candlestick.Ema(25).Last().Tick;
+            //});
 
             GetListenKey();
 
@@ -152,8 +167,13 @@ namespace ImMillionaire.Brain
                 // Handle order update info data
                 if (data.Side == OrderSide.Buy && data.Status == OrderStatus.Filled)
                 {
-                    Utils.Log($"buy", ConsoleColor.Green);
-                    SellLimit(data.Price, data.Quantity);
+                    decimal amount = data.Quantity;
+                    if (data.Commission > 0)
+                    {
+                        amount = data.Quantity - (data.Quantity * 0.00075m);//BNB fee
+                    }
+
+                    SellLimit(data.Price, amount);
                 }
                 else if (data.Side == OrderSide.Sell && data.Status == OrderStatus.Filled)
                 {
@@ -167,14 +187,15 @@ namespace ImMillionaire.Brain
                 }
             },
             null, // Handler for OCO updates
-            //null,
-            (IEnumerable<BinanceStreamBalance> data) =>
-            {
-                // Handler for position updates
-            },
+            null,
+            //(IEnumerable<BinanceStreamBalance> data) =>
+            //{
+            //    // Handler for position updates
+            //},
             null); // Handler for account balance updates (withdrawals/deposits)
 
-            Utils.Log("Bot started", ConsoleColor.Green);
+            BotHasStarted = true;
+            Utils.Log("Bot end init", ConsoleColor.Green);
         }
 
         private void GetCandlestickData()
@@ -182,85 +203,38 @@ namespace ImMillionaire.Brain
             // Public
             Ping = Client.Ping().Data;
             BinanceExchangeInfo = Client.GetExchangeInfo().Data;
+            var tardeFee = Client.GetTradeFee(Symbol);
+            var account = Client.GetAccountInfo();
+            BinanceSymbol = BinanceExchangeInfo.Symbols.FirstOrDefault(x => x.Name == Symbol);
 
             // default 500 (500 minutos/ 60
-            WebCallResult<IEnumerable<BinanceKline>> klines = Client.GetKlines(Symbol, KlineInterval.OneMinute);//, startTime: DateTime.UtcNow.AddMinutes(-500), endTime: DateTime.UtcNow);
+            WebCallResult<IEnumerable<BinanceKline>> klines = Client.GetKlines(Symbol, KlineInterval.OneMinute);
             if (klines.Success)
             {
                 Candlestick = klines.Data.Select(k => new Candlestick(k)).ToList<IOhlcv>();
             }
 
             Candlestick1Hours = Client.GetKlines(Symbol, KlineInterval.OneHour).Data.Select(k => new Candlestick(k)).ToList<IOhlcv>();
-            Candlestick4Hours = Client.GetKlines(Symbol, KlineInterval.FourHour).Data.Select(k => new Candlestick(k)).ToList<IOhlcv>();
-            Candlestick1Day = Client.GetKlines(Symbol, KlineInterval.OneDay).Data.Select(k => new Candlestick(k)).ToList<IOhlcv>();
-
-            //  var price = client.GetPrice(Symbol);
-            //  var prices24h = client.Get24HPrice(Symbol);
-            //  var allPrices = client.GetAllPrices();
-            //  var allBookPrices = client.GetAllBookPrices();
-            //  var historicalTrades = client.GetHistoricalSymbolTrades(Symbol);
-
-            // Private
-            //var openOrders = client.GetOpenOrders();
-            //  var margin = client.GetMarginAccountInfo();
-            //  var openOrderM = client.GetOpenMarginAccountOrders();
-            // var myaccount = client.GetAccountInfo();
-
-            //client.GetTradeFee()
-            //  var orderBook = client.GetOrderBook(Symbol, 10);
-
-            //var allOrders = client.GetAllOrders("BNBBTC");
-            //var testOrderResult = client.PlaceTestOrder("BNBBTC", OrderSide.Buy, OrderType.Limit, 1, price: 1, timeInForce: TimeInForce.GoodTillCancel);
-            //var queryOrder = client.GetOrder("BNBBTC", allOrders.Data.First().OrderId);
-            //var orderResult = client.PlaceOrder("BNBBTC", OrderSide.Sell, OrderType.Limit, 10, price: 0.0002m, timeInForce: TimeInForce.GoodTillCancel);
-            //var cancelResult = client.CancelOrder("BNBBTC", orderResult.Data.OrderId);
-            //var accountInfo = client.GetAccountInfo();
-            //var myTrades = client.GetMyTrades("BNBBTC");
-
-
-            //                var rule = Rule.Create(c => c.IsAboveSma(30)).And(c => c.IsAboveSma(10));
-
-            //// Use context here for caching indicator results
-            //using (var ctx = new AnalyzeContext(candles))
-            //{
-            //    var validObjects = new SimpleRuleExecutor(ctx, rule).Execute();
-            //    Console.WriteLine(validObjects.Count());
-            //}
-
-            //// Build buy rule & sell rule based on various patterns
-            //var buyRule = Rule.Create(c => c.IsFullStoBullishCross(14, 3, 3))
-            //    .And(c => c.IsMacdOscBullish(12, 26, 9))
-            //    .And(c => c.IsSmaOscBullish(10, 30))
-            //    .And(c => c.IsAccumDistBullish());
-
-            //var sellRule = Rule.Create(c => c.IsFullStoBearishCross(14, 3, 3))
-            //    .Or(c => c.IsMacdBearishCross(12, 24, 9))
-            //    .Or(c => c.IsSmaBearishCross(10, 30));
-
-            //// Create portfolio instance by using PortfolioBuilder
-            //var runner = new Trady.Analysis.Backtest.Builder()
-            //    .Add(candles, 10)
-            //    .Add(candles, 30)
-            //    .Buy(buyRule)
-            //    .Sell(sellRule)
-            //    .BuyWithAllAvailableCash()
-            //    .FlatExchangeFeeRate(0.001m)
-            //    .Premium(1)
-            //    .Build();
+            // Candlestick4Hours = Client.GetKlines(Symbol, KlineInterval.FourHour).Data.Select(k => new Candlestick(k)).ToList<IOhlcv>();
+            //  Candlestick1Day = Client.GetKlines(Symbol, KlineInterval.OneDay).Data.Select(k => new Candlestick(k)).ToList<IOhlcv>();
 
         }
 
         private async void GetListenKey()
         {
-            listenKey = Client.StartMarginUserStream().Data;
-            while (true)
+            WebCallResult<string> result = Client.StartMarginUserStream();
+            if (result.Success)
             {
-                await Task.Delay(new TimeSpan(0, 45, 0));
+                listenKey = result.Data;
 
-                var keepAliveResult = Client.KeepAliveUserStream(listenKey);
-                if (!keepAliveResult.Success)
+                while (true)
                 {
-                    listenKey = Client.StartMarginUserStream().Data;
+                    await Task.Delay(new TimeSpan(0, 45, 0));
+
+                    if (!Client.KeepAliveMarginUserStream(listenKey).Success)
+                    {
+                        listenKey = Client.StartMarginUserStream().Data;
+                    }
                 }
             }
         }
@@ -272,15 +246,12 @@ namespace ImMillionaire.Brain
                 Candlestick candle = new Candlestick(data.Data);
                 candlestick.Add(candle);
 
-                // Console.WriteLine(DateTime.Now.ToString() + " | INFO: " + $"event: {data.Event} Close: {data.Data.Close}--- TradeCount {data.Data.TradeCount}--- Open {data.Data.Open}");
-
                 calculateIndicators(candlestick, candle);
 
                 if (!data.Data.Final)
                 {
                     candlestick.Remove(candle);
                 }
-                // handle data
             });
 
             if (successKline.Success)
@@ -289,7 +260,6 @@ namespace ImMillionaire.Brain
                 {
                     SocketClient.Unsubscribe(successKline.Data);
                     SubscribeToKlineUpdates(candlestick, interval, calculateIndicators);
-                    // successKline.Data.Exception
                     Utils.ErrorLog("ConnectionLost");
                 };
             }
@@ -297,6 +267,7 @@ namespace ImMillionaire.Brain
 
         bool xptoUp = true;
         bool xptoDown = true;
+
         BinancePlacedOrder BinancePlacedOrder = null;
         private void Analyzable(decimal marketPrice)
         {
@@ -304,11 +275,11 @@ namespace ImMillionaire.Brain
             {
                 //  Utils.ErrorLog("overbuyed sell mf");
             }
-            else if (CandlestickData.rsi14.Value < 29m)
+            else if (CandlestickData.rsi14.Value < 30m)
             {
                 BuyLimit();
 
-               // Utils.SuccessLog("oversell buy mf");
+                // Utils.SuccessLog("oversell buy mf");
             }
             //up trend
             if (CandlestickData.ema120.Value < CandlestickData.ema10.Value)
@@ -356,8 +327,27 @@ namespace ImMillionaire.Brain
                     var currentTradingAsset = binanceMarginAccount.Data.Balances.FirstOrDefault(x => x.Asset.ToLower() == "busd".ToLower());
                     if (currentTradingAsset.Free > 1)
                     {
-                        decimal price = lastBid;
-                        var amount = decimal.Round((currentTradingAsset.Free / price), 6);
+                        var locallastBid = lastBid;
+
+                        // margin of safe to buy in the best price 0.01%
+                        decimal price = decimal.Round(locallastBid - locallastBid * (0.015m / 100), 2);
+
+                        //decimal price = lastBid;
+                        if (BinanceStreamTrade != null)
+                        {
+                            if (lastBid > BinanceStreamTrade.Price)
+                            {
+                                Utils.Log($"place buy at: {BinanceStreamTrade.Price} and {locallastBid}", ConsoleColor.DarkBlue);
+                            }
+
+                            if (price > BinanceStreamTrade.Price)
+                            {
+                                Utils.Log($"place buy at: {BinanceStreamTrade.Price} and {locallastBid}", ConsoleColor.DarkBlue);
+                                price = decimal.Round(BinanceStreamTrade.Price - BinanceStreamTrade.Price * (0.01m / 100), 2);
+                            }
+                        }
+                        Utils.Log($"buy Market: {BinanceStreamTrade.Price} Bid: {locallastBid} new price: {price}", ConsoleColor.DarkRed);
+                        var amount = Utils.TruncateDecimal(currentTradingAsset.Free / price, 6 /*BinanceSymbol.BaseAssetPrecision*/);
                         var order = Client.PlaceMarginOrder(Symbol, OrderSide.Buy, OrderType.Limit, amount, null, null, price, TimeInForce.GoodTillCancel);
                         if (order.Success)
                         {
@@ -375,33 +365,46 @@ namespace ImMillionaire.Brain
             }
         }
 
-        private async void CheckBuyWasExecuted(int waitMinutesBeforeCancel = 1)
+        private void CheckBuyWasExecuted(int waitSecondsBeforeCancel = 25)
         {
-            await Task.Delay(new TimeSpan(0, waitMinutesBeforeCancel, 0));
-            if (BinancePlacedOrder == null) return;
-
-            var orderRequest = Client.GetOrder(Symbol, BinancePlacedOrder.OrderId);
-            if (!orderRequest.Success /*&& orderRequest.Error.Code == -2013*/) return;
-
-            BinanceOrder order = orderRequest.Data;
-            if (order.Side == OrderSide.Buy && order.Status != OrderStatus.Filled)
+            Task.Run(() =>
             {
-                Client.CancelOrder(Symbol, BinancePlacedOrder.OrderId);
-            }
+                Thread.Sleep(TimeSpan.FromSeconds(waitSecondsBeforeCancel));
+                if (BinancePlacedOrder == null) return;
+
+                var orderRequest = Client.GetMarginAccountOrder(Symbol, BinancePlacedOrder.OrderId);
+                if (!orderRequest.Success) return;
+
+                BinanceOrder order = orderRequest.Data;
+                if (order.Side == OrderSide.Buy && order.Status != OrderStatus.Filled)
+                {
+                    Client.CancelMarginOrderAsync(Symbol, BinancePlacedOrder.OrderId);
+                }
+            });
         }
 
-        private void SellLimit(decimal price, decimal amount)
+        private async void SellLimit(decimal price, decimal amount, int numTry = 1)
         {
-            var newPrice = decimal.Round(price + price * (0.08m / 100), 2);
-            var order = Client.PlaceMarginOrder(Symbol, OrderSide.Sell, OrderType.Limit, amount, null, null, newPrice, TimeInForce.GoodTillCancel);
-            if (order.Success)
+            if (numTry > 3) return;
+
+            var newPrice = decimal.Round(price + price * (0.15m / 100), 2);
+            try
             {
-                Utils.Log($"place sell at: {newPrice}", ConsoleColor.Green);
+                var order = await Client.PlaceMarginOrderAsync(Symbol, OrderSide.Sell, OrderType.Limit, amount, null, null, newPrice, TimeInForce.GoodTillCancel);
+                if (order.Success)
+                {
+                    Utils.Log($"place sell at: {newPrice}", ConsoleColor.Green);
+                }
+                else
+                {
+                    SellLimit(price, amount, numTry + 1);
+                    Utils.Log($"error place sell at: {newPrice}  {order.Error.Message}", ConsoleColor.Red);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                SellLimit(price, amount);
-                Utils.Log($"error place sell at: {newPrice}  {order.Error.Message}", ConsoleColor.Red);
+                SellLimit(price, amount, numTry + 1);
+                Utils.Log($"error place sell at: {newPrice}  {ex.Message}", ConsoleColor.Red);
             }
         }
 
@@ -457,25 +460,6 @@ namespace ImMillionaire.Brain
             SocketClient?.UnsubscribeAll();
             SocketClient?.Dispose();
         }
-
-        //public async Task<WebCallResult<BinanceSubAccountFuturesEnabled>> EnableFuturesForSubAccountAsync(string email, int? receiveWindow = null, CancellationToken ct = default)
-        //{
-        //    email.ValidateNotNull(nameof(email));
-
-        //    var timestampResult = await CheckAutoTimestamp(ct).ConfigureAwait(false);
-        //    if (!timestampResult)
-        //        return new WebCallResult<BinanceSubAccountFuturesEnabled>(timestampResult.ResponseStatusCode, timestampResult.ResponseHeaders, null, timestampResult.Error);
-
-        //    var parameters = new Dictionary<string, object>
-        //    {
-        //        { "email", email },
-        //        { "timestamp", GetTimestamp() },
-        //    };
-
-        //    parameters.AddOptionalParameter("recvWindow", receiveWindow?.ToString(CultureInfo.InvariantCulture) ?? defaultReceiveWindow.TotalMilliseconds.ToString(CultureInfo.InvariantCulture));
-
-        //    return await SendRequest<BinanceSubAccountFuturesEnabled>(GetUrl(SubAccountEnableFuturesEndpoint, MarginApi, MarginVersion), HttpMethod.Post, ct, parameters, true).ConfigureAwait(false);
-        //}
     }
 
 }

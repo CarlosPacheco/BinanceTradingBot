@@ -13,9 +13,10 @@ namespace ImMillionaire
         private static void StartAll()
         {
             try
-            {
-                using (Trader trader = new Trader())
-               // using (TraderFutures traderFuture = new TraderFutures())
+            {  
+                using (MyBotTrade trader = new MyBotTrade())
+                //using (Trader trader = new Trader())
+                // using (TraderFutures traderFuture = new TraderFutures())
                 {
                     trader.Start();
                  //   traderFuture.Start();
@@ -23,7 +24,7 @@ namespace ImMillionaire
                     Console.ReadLine();
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 StartAll();
             }

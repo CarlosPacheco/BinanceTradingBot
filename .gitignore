@@ -48,3 +48,4 @@ bin
 obj
 packages
 .vs
+/ImMillionaire.Brain/config_1.json
