@@ -1,4 +1,6 @@
 ﻿using Binance.Net.Enums;
+using Binance.Net.Interfaces.SocketSubClient;
+using Binance.Net.Interfaces.SubClients;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -10,9 +12,15 @@ namespace ImMillionaire.Brain.Core
     {
         long Ping();
 
-        decimal GetCurrentTradePrice { get; set; }
+        decimal GetCurrentTradePrice { get; }
 
         AccountBinanceSymbol GetAccountBinanceSymbol();
+
+        IBinanceClientMarket Market { get; }
+
+        IBinanceClientUserStream UserStream { get; }
+
+        IBinanceSocketClientBase BinanceSocketClientBase { get; }
 
         IList<IOhlcv> GetKlines(KlineInterval klineInterval);
 

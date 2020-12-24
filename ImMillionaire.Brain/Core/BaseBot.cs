@@ -31,7 +31,7 @@ namespace ImMillionaire.Brain.Core
         public BaseBot(WalletType walletType)
         {
             /* Binance Configuration */
-            Configuration = JsonConvert.DeserializeObject<ConfigOptions>(File.ReadAllText("config_1.json"));
+            Configuration = JsonConvert.DeserializeObject<ConfigOptions>(File.ReadAllText("config.json"));
 
             //binance client factory
             switch (walletType)
