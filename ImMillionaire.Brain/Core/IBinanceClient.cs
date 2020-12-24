@@ -1,5 +1,4 @@
 ﻿using Binance.Net.Enums;
-using CryptoExchange.Net.Objects;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -27,7 +26,11 @@ namespace ImMillionaire.Brain.Core
 
         Task<bool> CancelOrderAsync(long orderId);
 
-        decimal GetFreeBalance();
+        decimal GetFreeBaseBalance();
+
+        decimal GetFreeQuoteBalance();
+
+        decimal GetFreeBalance(string asset);
 
         void SubscribeToKlineUpdates(IList<IOhlcv> candlestick, KlineInterval interval, Action<IList<IOhlcv>, Candlestick> calculateIndicators);
 

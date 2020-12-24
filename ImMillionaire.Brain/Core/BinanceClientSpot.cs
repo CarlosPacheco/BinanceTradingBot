@@ -1,13 +1,18 @@
 ﻿using Binance.Net;
 using Binance.Net.Enums;
 using Binance.Net.Interfaces;
+using Binance.Net.Interfaces.SocketSubClient;
+using Binance.Net.Interfaces.SubClients;
 using Binance.Net.Objects.Spot;
 using Binance.Net.Objects.Spot.MarketData;
+using Binance.Net.Objects.Spot.SpotData;
+using Binance.Net.Objects.Spot.UserStream;
 using CryptoExchange.Net.Authentication;
 using CryptoExchange.Net.Objects;
+using CryptoExchange.Net.Sockets;
+using Serilog;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Trady.Core.Infrastructure;
@@ -20,36 +25,50 @@ namespace ImMillionaire.Brain.Core
 
         private Binance.Net.Interfaces.IBinanceClient Client { get; set; }
 
+        private string listenKey;
+
         public ConfigOptions Configuration { get; }
 
-        private string Symbol { get; set; }
-
         public decimal GetCurrentTradePrice { get; set; }
+
+        private AccountBinanceSymbol BinanceSymbol { get; }
+
+        public IBinanceClientMarket Market { get; set; }
+        public IBinanceClientUserStream UserStream { get; set; }
+        public IBinanceSocketClientBase BinanceSocketClientBase { get; set; }
 
         public BinanceClientSpot(ConfigOptions config)
         {
             Configuration = config;
-            Symbol = config.Symbol;
 
-            BinanceClient.SetDefaultOptions(new BinanceClientOptions()
+            SocketClient = new BinanceSocketClient(new BinanceSocketClientOptions()
             {
                 ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey)
             });
-            BinanceSocketClient.SetDefaultOptions(new BinanceSocketClientOptions()
+            Client = new BinanceClient(new BinanceClientOptions()
             {
                 ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey)
             });
 
-            SocketClient = new BinanceSocketClient();
-            Client = new BinanceClient();
+            BinanceSymbol symbol = Client.Spot.System.GetExchangeInfo().Data.Symbols.FirstOrDefault(x => x.Name == config.Symbol);
+            if (symbol == null) throw new Exception("Symbol dont exist!");
+            BinanceSymbol = new AccountBinanceSymbol(symbol);
+
+            Market = Client.Spot.Market;
+            UserStream = Client.Spot.UserStream;
+            BinanceSocketClientBase = SocketClient.Spot;
         }
 
         public IList<IOhlcv> GetKlines(KlineInterval klineInterval)
         {
-            WebCallResult<IEnumerable<BinanceKline>> klines = Client.GetKlines(Symbol, klineInterval);
+            WebCallResult<IEnumerable<IBinanceKline>> klines = Market.GetKlines(BinanceSymbol.Name, klineInterval);
             if (klines.Success)
             {
                 return klines.Data.Select(k => new Candlestick(k)).ToList<IOhlcv>();
+            }
+            else
+            {
+                Log.Fatal($"{klines.Error?.Message}");
             }
 
             return null;
@@ -62,14 +81,18 @@ namespace ImMillionaire.Brain.Core
 
         public AccountBinanceSymbol GetAccountBinanceSymbol()
         {
-            return new AccountBinanceSymbol(Client.GetExchangeInfo().Data.Symbols.FirstOrDefault(x => x.Name == Symbol));
+            return BinanceSymbol;
         }
 
         public bool TryPlaceOrder(OrderSide side, OrderType type, decimal quantity, decimal price, TimeInForce timeInForce, out Order order)
         {
             order = null;
-            var orderRequest = Client.PlaceOrder(Symbol, side, type, quantity, null, null, price, timeInForce);
-            if (!orderRequest.Success) return false;
+            WebCallResult<BinancePlacedOrder> orderRequest = Client.Spot.Order.PlaceOrder(BinanceSymbol.Name, side, type, quantity, null, null, price, timeInForce);
+            if (!orderRequest.Success)
+            {
+                Log.Fatal($"{orderRequest.Error?.Message}");
+                return false;
+            }
 
             order = new Order(orderRequest.Data);
             return true;
@@ -78,9 +101,12 @@ namespace ImMillionaire.Brain.Core
         public bool TryGetOrder(long orderId, out Order order)
         {
             order = null;
-
-            var orderRequest = Client.GetOrder(Symbol, orderId);
-            if (!orderRequest.Success) return false;
+            WebCallResult<BinanceOrder> orderRequest = Client.Spot.Order.GetOrder(BinanceSymbol.Name, orderId);
+            if (!orderRequest.Success)
+            {
+                Log.Fatal($"{orderRequest.Error?.Message}");
+                return false;
+            }
 
             order = new Order(orderRequest.Data);
             return true;
@@ -88,39 +114,164 @@ namespace ImMillionaire.Brain.Core
 
         public bool CancelOrder(long orderId)
         {
-            return Client.CancelOrder(Symbol, orderId).Success;
-        }
-
-        public void Dispose()
-        {
-            Client?.Dispose();
-            SocketClient?.UnsubscribeAll();
-            SocketClient?.Dispose();
-        }
-
-        public decimal GetFreeBalance()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<(bool IsSucess, Order Order)> TryPlaceOrderAsync(OrderSide side, OrderType type, decimal quantity, decimal price, TimeInForce timeInForce)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void SubscribeToKlineUpdates(IList<IOhlcv> candlestick, KlineInterval interval, Action<IList<IOhlcv>, Candlestick> calculateIndicators)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void StartSocketConnections(Action<EventOrderBook> eventOrderBook, Action<Order> orderUpdate)
-        {
-            throw new NotImplementedException();
+            return Client.Spot.Order.CancelOrder(BinanceSymbol.Name, orderId).Success;
         }
 
         public async Task<bool> CancelOrderAsync(long orderId)
         {
-            return (await Client.CancelOrderAsync(Symbol, orderId)).Success;
+            return (await Client.Spot.Order.CancelOrderAsync(BinanceSymbol.Name, orderId)).Success;
+        }
+
+        public async Task<(bool IsSucess, Order Order)> TryPlaceOrderAsync(OrderSide side, OrderType type, decimal quantity, decimal price, TimeInForce timeInForce)
+        {
+            WebCallResult<BinancePlacedOrder> orderRequest = await Client.Spot.Order.PlaceOrderAsync(BinanceSymbol.Name, side, type, quantity, null, null, price, timeInForce);
+            if (!orderRequest.Success)
+            {
+                Log.Warning($"error place {side} at: {price} {orderRequest.Error.Message}");
+                Log.Fatal($"{orderRequest.Error?.Message}");
+                return (false, null);
+            }
+
+            return (true, new Order(orderRequest.Data));
+        }
+
+        public void SubscribeToKlineUpdates(IList<IOhlcv> candlestick, KlineInterval interval, Action<IList<IOhlcv>, Candlestick> calculateIndicators)
+        {
+            CallResult<UpdateSubscription> successKline = BinanceSocketClientBase.SubscribeToKlineUpdates(BinanceSymbol.Name, interval, (IBinanceStreamKlineData data) =>
+            {
+                Candlestick candle = new Candlestick(data.Data);
+                candlestick.Add(candle);
+
+                calculateIndicators(candlestick, candle);
+
+                if (!data.Data.Final)
+                {
+                    candlestick.Remove(candle);
+                }
+            });
+
+            UpdateSubscriptionAutoConnetionIfConnLost(successKline, () => SubscribeToKlineUpdates(candlestick, interval, calculateIndicators));
+        }
+
+        private void UpdateSubscriptionAutoConnetionIfConnLost(CallResult<UpdateSubscription> updateSubscription, Action callback)
+        {
+            if (updateSubscription.Success)
+            {
+                updateSubscription.Data.ConnectionLost += () =>
+                {
+                    SocketClient.Unsubscribe(updateSubscription.Data);
+                    callback();
+                    Log.Information("ConnectionLost");
+                };
+
+                updateSubscription.Data.Exception += (ex) =>
+                {
+                    Log.Fatal(ex, "ConnectionLost error unexpectedly.");
+                };
+            }
+            else
+            {
+                Log.Fatal($"{updateSubscription.Error?.Message}");
+            }
+        }
+
+        public void StartSocketConnections(Action<EventOrderBook> eventOrderBook, Action<Order> orderUpdate)
+        {
+            SubscribeToOrderBookUpdates(eventOrderBook);
+            GetListenKey();
+            SubscribeToUserDataUpdates(orderUpdate);
+            KeepAliveListenKey();
+        }
+
+        private void GetListenKey()
+        {
+            WebCallResult<string> result = UserStream.StartUserStream();
+            if (result.Success)
+            {
+                listenKey = result.Data;
+            }
+            else
+            {
+                Log.Fatal($"{result.Error?.Message} - GetListenKey");
+            }
+        }
+
+        private async void KeepAliveListenKey()
+        {
+            while (true)
+            {
+                await Task.Delay(new TimeSpan(0, 45, 0));
+
+                if (!UserStream.KeepAliveUserStream(listenKey).Success)
+                {
+                    listenKey = UserStream.StartUserStream().Data;
+                }
+            }
+        }
+
+        private void SubscribeToUserDataUpdates(Action<Order> orderUpdate)
+        {
+            if (string.IsNullOrWhiteSpace(listenKey))
+            {
+                Log.Fatal($"ListenKey can't be null, maybe you have Api key Restrict access to trusted IPs only enabled");
+                GetListenKey();
+            }
+
+            CallResult<UpdateSubscription> successAccount = SocketClient.Spot.SubscribeToUserDataUpdates(listenKey,
+            null,// Handle account info data
+            (BinanceStreamOrderUpdate data) => orderUpdate(new Order(data)), // Handle order update info data
+            null, // Handler for OCO updates
+            null, // Handler for position updates
+            null); // Handler for account balance updates (withdrawals/deposits)
+
+            UpdateSubscriptionAutoConnetionIfConnLost(successAccount, () => SubscribeToUserDataUpdates(orderUpdate));
+        }
+
+        private void SubscribeToOrderBookUpdates(Action<EventOrderBook> eventOrderBook)
+        {
+            CallResult<UpdateSubscription> successDepth = SocketClient.Spot.SubscribeToOrderBookUpdates(BinanceSymbol.Name, 1000, (IBinanceOrderBook data) =>
+            {
+                if (data.Asks.Any() && data.Bids.Any())
+                {
+                    eventOrderBook(new EventOrderBook(data.Asks.First().Price, data.Bids.First().Price));
+                }
+            });
+
+            UpdateSubscriptionAutoConnetionIfConnLost(successDepth, () => SubscribeToOrderBookUpdates(eventOrderBook));
+        }
+
+        public decimal GetFreeBaseBalance()
+        {
+            return GetFreeBalance(BinanceSymbol.BaseAsset);
+        }
+
+        public decimal GetFreeQuoteBalance()
+        {
+            return GetFreeBalance(BinanceSymbol.QuoteAsset);
+        }
+
+        public decimal GetFreeBalance(string asset)
+        {
+            WebCallResult<BinanceAccountInfo> binanceMarginAccount = Client.General.GetAccountInfo();
+            if (binanceMarginAccount.Success)
+            {
+                var currentTradingAsset = binanceMarginAccount.Data.Balances.FirstOrDefault(x => x.Asset.ToLower() == asset.ToLower());
+                return currentTradingAsset.Free;
+            }
+            else
+            {
+                Log.Fatal($"{binanceMarginAccount.Error?.Message}");
+            }
+
+            return 0;
+        }
+
+        public void Dispose()
+        {
+            if (!string.IsNullOrWhiteSpace(listenKey)) UserStream.StopUserStream(listenKey);
+            Client?.Dispose();
+            SocketClient?.UnsubscribeAll();
+            SocketClient?.Dispose();
         }
     }
 }

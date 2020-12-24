@@ -1,5 +1,6 @@
 ﻿using Binance.Net.Enums;
 using Binance.Net.Objects.Futures.FuturesData;
+using Binance.Net.Objects.Futures.UserStream;
 using Binance.Net.Objects.Spot.SpotData;
 using Binance.Net.Objects.Spot.UserStream;
 using System;
@@ -136,6 +137,17 @@ namespace ImMillionaire.Brain.Core
         }
 
         public Order(BinanceStreamOrderUpdate data)
+        {
+            Side = data.Side;
+            Status = data.Status;
+            OrderId = data.OrderId;
+            Price = data.Price;
+            Quantity = data.Quantity;
+            CommissionAsset = data.CommissionAsset;
+            Commission = data.Commission;
+        }
+
+        public Order(BinanceFuturesStreamOrderUpdateData data)
         {
             Side = data.Side;
             Status = data.Status;

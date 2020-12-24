@@ -1,6 +1,7 @@
 ﻿using Binance.Net.Enums;
 using ImMillionaire.Brain.Core.Enums;
 using Newtonsoft.Json;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -30,7 +31,7 @@ namespace ImMillionaire.Brain.Core
         public BaseBot(WalletType walletType)
         {
             /* Binance Configuration */
-            Configuration = JsonConvert.DeserializeObject<ConfigOptions>(File.ReadAllText("config.json"));
+            Configuration = JsonConvert.DeserializeObject<ConfigOptions>(File.ReadAllText("config_1.json"));
 
             //binance client factory
             switch (walletType)
@@ -49,23 +50,32 @@ namespace ImMillionaire.Brain.Core
 
         public void Start()
         {
-            Utils.Log("Bot started init", ConsoleColor.Green);
+            Log.Information("Bot Starting host...");
 
             // Public
             Ping = BinanceClient.Ping();
             BinanceSymbol = BinanceClient.GetAccountBinanceSymbol();
 
-            // cand
-            var Candlestick = BinanceClient.GetKlines(KlineInterval.OneMinute);
-            Candlesticks.Add(KlineInterval.OneMinute, Candlestick);
-            BinanceClient.SubscribeToKlineUpdates(Candlestick, KlineInterval.OneMinute, KlineUpdates);
+            Log.Information("BinanceSymbol: {0}", BinanceSymbol.Name);
+
+            // Candlesticks
+            RegisterCandlestickUpdates();
 
             BinanceClient.StartSocketConnections(EventOrderBook, OrderUpdate);
 
-            Utils.Log("Bot end init", ConsoleColor.Green);
+            Log.Information("Bot end init");
         }
 
-        protected abstract void KlineUpdates(IList<IOhlcv> candlestick, Candlestick candle);
+        protected void SubscribeCandlesticks(KlineInterval klineInterval, Action<IList<IOhlcv>, Candlestick> CandlestickUpdate)
+        {
+            IList<IOhlcv> Candlestick = BinanceClient.GetKlines(klineInterval);
+            Candlesticks.Add(klineInterval, Candlestick);
+            BinanceClient.SubscribeToKlineUpdates(Candlestick, klineInterval, CandlestickUpdate);
+        }
+
+        // protected abstract void KlineUpdates(IList<IOhlcv> candlestick, Candlestick candle);
+
+        protected abstract void RegisterCandlestickUpdates();
 
         protected abstract void OrderUpdate(Order order);
 
@@ -75,7 +85,7 @@ namespace ImMillionaire.Brain.Core
         {
             if (PlacedOrder == null)
             {
-                decimal freeBalance = BinanceClient.GetFreeBalance();
+                decimal freeBalance = BinanceClient.GetFreeQuoteBalance();
                 if (freeBalance > 1)
                 {
                     var locallastBid = OrderBook.LastBidPrice;
@@ -88,7 +98,7 @@ namespace ImMillionaire.Brain.Core
                     {
                         PlacedOrder = order;
                         CheckBuyWasExecuted();
-                        Utils.Log($"place buy at: {price}", ConsoleColor.Green);
+                        Log.Warning($"place buy at: {price}");
                     }
                 }
             }
@@ -100,7 +110,7 @@ namespace ImMillionaire.Brain.Core
         }
 
         public virtual void SellLimit()
-        {         
+        {
             //var newPrice = decimal.Round(price + price * (0.15m / 100), 2);
             //try
             //{

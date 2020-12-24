@@ -1,5 +1,9 @@
 ﻿using ImMillionaire.Brain;
+using ImMillionaire.Brain.Core;
+using Microsoft.Extensions.Configuration;
+using Serilog;
 using System;
+using System.IO;
 
 namespace ImMillionaire
 {
@@ -7,16 +11,21 @@ namespace ImMillionaire
     {
         static void Main(string[] args)
         {
+            IConfiguration configuration = new ConfigurationBuilder()
+              .SetBasePath(Directory.GetCurrentDirectory())
+              .AddJsonFile("appsettings.json").Build();
+            Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(configuration).CreateLogger();
+
             StartAll();
         }
 
         private static void StartAll()
         {
             try
-            {  
-                using (MyBotTrade trader = new MyBotTrade())
-                //using (Trader trader = new Trader())
-                // using (TraderFutures traderFuture = new TraderFutures())
+            {
+               //  using (BaseBot trader = new MyBotTradeConservative())
+                using (BaseBot trader = new MyBotTrade())
+                // using (BaseBot traderFuture = new TraderFutures())
                 {
                     trader.Start();
                  //   traderFuture.Start();
@@ -26,7 +35,11 @@ namespace ImMillionaire
             }
             catch (Exception ex)
             {
+                Log.Fatal(ex, "Host terminated unexpectedly.");
+
                 StartAll();
+
+                Log.Information("Trying again...");
             }
          
         }

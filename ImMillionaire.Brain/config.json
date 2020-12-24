@@ -1,7 +1,5 @@
 {
 	"symbol": "BTCBUSD",
-	"base": "BTC",
-	"trade": "BUSD",
 	"key": "your-key-here",
 	"secret": "your-secret-here"
 }
