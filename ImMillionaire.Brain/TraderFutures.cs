@@ -30,17 +30,17 @@ namespace ImMillionaire.Brain
             if (order.Side == OrderSide.Buy && order.Status == OrderStatus.Filled)
             {
                 PlacedOrder = order;
-                Log.Information($"buy future");
+                Log.Information("buy future");
                 SellLimit();
             }
             else if (order.Side == OrderSide.Sell && order.Status == OrderStatus.Filled)
             {
-                Log.Information($"sell future");
+                Log.Information("sell future");
                 PlacedOrder = null;
             }
             else if (order.Side == OrderSide.Buy && order.Status == OrderStatus.Canceled)
             {
-                Log.Information($"cancel buy future");
+                Log.Information("cancel buy future");
                 PlacedOrder = null;
             }
         }
@@ -127,21 +127,21 @@ namespace ImMillionaire.Brain
             if (PlacedOrder == null)
             {
                 decimal freeBalance = BinanceClient.GetFreeQuoteBalance();
-                if (freeBalance > 1)
+                if (freeBalance > 1 && OrderBook != null)
                 {
                     decimal price = OrderBook.LastBidPrice;
 
-                    var amount = Utils.TruncateDecimal(freeBalance / price, 6);
+                    decimal amount = Utils.TruncateDecimal(freeBalance / price, 6);
 
                     if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, amount, price, TimeInForce.GoodTillCancel, out Order order))
                     {
                         PlacedOrder = order;
                         CheckBuyWasExecuted();
-                        Log.Information($"future place buy at: {price} {OrderBook.LastAskPrice}");
+                        Log.Warning("future place buy at: {0} {1}", price, OrderBook.LastAskPrice);
                     }
                     else
                     {
-                        Log.Information($"future error place buy at: {price} {amount}");
+                        Log.Warning("future error place buy at: {0} {1}", price, amount);
                     }
                 }
 
@@ -151,19 +151,19 @@ namespace ImMillionaire.Brain
         public override void SellLimit()
         {
             decimal percentage = 0.10m;
-            var amount = PlacedOrder.Quantity;
-            var newPrice = decimal.Round(PlacedOrder.Price + PlacedOrder.Price * (percentage / 100), 2);
+            decimal amount = PlacedOrder.Quantity;
+            decimal newPrice = decimal.Round(PlacedOrder.Price + PlacedOrder.Price * (percentage / 100), 2);
 
             try
             {
                 if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, amount, newPrice, TimeInForce.GoodTillCancel, out Order order))
                 {
-                    Log.Information($"place sell at: {newPrice}");
+                    Log.Warning("place sell at: {0}", newPrice);
                 }
             }
             catch (Exception ex)
             {
-                Log.Information($"error sell price: {newPrice} amount: {amount} {ex.Message}");
+                Log.Fatal("error sell price: {0} amount: {1} {2}", newPrice, amount, ex.Message);
             }
         }
     }

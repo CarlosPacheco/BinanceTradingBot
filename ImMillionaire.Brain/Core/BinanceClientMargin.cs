@@ -11,9 +11,11 @@ using Binance.Net.Objects.Spot.UserStream;
 using CryptoExchange.Net.Authentication;
 using CryptoExchange.Net.Objects;
 using CryptoExchange.Net.Sockets;
+using ImMillionaire.Brain.Logger;
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Trady.Core.Infrastructure;
@@ -34,9 +36,12 @@ namespace ImMillionaire.Brain.Core
         private AccountBinanceSymbol BinanceSymbol { get; }
 
         public IBinanceClientMarket Market { get; set; }
+
         public IBinanceClientUserStream UserStream { get; set; }
 
         public IBinanceSocketClientBase BinanceSocketClientBase { get; set; }
+
+        public int DecimalAmount { get; set; }
 
         public BinanceClientMargin(ConfigOptions config)
         {
@@ -44,19 +49,36 @@ namespace ImMillionaire.Brain.Core
 
             SocketClient = new BinanceSocketClient(new BinanceSocketClientOptions()
             {
-                ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey)
+                ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey),
+                SocketNoDataTimeout = TimeSpan.FromMinutes(5),
+               // LogVerbosity = CryptoExchange.Net.Logging.LogVerbosity.Debug,
+                LogWriters = new List<TextWriter> { TextWriterLogger.Out }
+             
             });
             Client = new BinanceClient(new BinanceClientOptions()
             {
-                ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey)
+                ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey),
+                LogWriters = new List<TextWriter> { TextWriterLogger.Out }
+                //LogVerbosity = CryptoExchange.Net.Logging.LogVerbosity.Debug,
+                //AutoTimestamp = true,
+                //AutoTimestampRecalculationInterval = TimeSpan.FromMinutes(30),
             });
 
             BinanceSymbol symbol = Client.Spot.System.GetExchangeInfo().Data.Symbols.FirstOrDefault(x => x.Name == config.Symbol);
             if (symbol == null) throw new Exception("Symbol don't exist!");
             BinanceSymbol = new AccountBinanceSymbol(symbol);
 
+            decimal stepSize = symbol.LotSizeFilter.StepSize;
+            if (stepSize != 0.0m)
+            {
+                for (DecimalAmount = 0; stepSize < 1; DecimalAmount++)
+                {
+                    stepSize *= 10;
+                }
+            }
+
             Market = Client.Spot.Market;
-            UserStream = Client.Spot.UserStream;
+            UserStream = Client.Margin.UserStream;
             BinanceSocketClientBase = SocketClient.Spot;
         }
 
@@ -69,7 +91,7 @@ namespace ImMillionaire.Brain.Core
             }
             else
             {
-                Log.Fatal($"{klines.Error?.Message}");
+                Log.Fatal("{0}", klines.Error?.Message);
             }
 
             return null;
@@ -91,8 +113,8 @@ namespace ImMillionaire.Brain.Core
             WebCallResult<BinancePlacedOrder> orderRequest = Client.Margin.Order.PlaceMarginOrder(BinanceSymbol.Name, side, type, quantity, null, null, price, timeInForce);
             if (!orderRequest.Success)
             {
-                Log.Information($"error place {side} at: {price} {orderRequest.Error.Message}");
-                Log.Fatal($"{orderRequest.Error?.Message}");
+                Log.Information("error place {0} at: {1}", side, price);
+                Log.Fatal("{0}", orderRequest.Error?.Message);
                 return false;
             }
 
@@ -105,8 +127,8 @@ namespace ImMillionaire.Brain.Core
             WebCallResult<BinancePlacedOrder> orderRequest = await Client.Margin.Order.PlaceMarginOrderAsync(BinanceSymbol.Name, side, type, quantity, null, null, price, timeInForce);
             if (!orderRequest.Success)
             {
-                Log.Warning($"error place {side} at: {price} {orderRequest.Error.Message}");
-                Log.Fatal($"{orderRequest.Error?.Message}");
+                Log.Information("error place {0} at: {1}", side, price);
+                Log.Fatal("{0}", orderRequest.Error?.Message);
                 return (false, null);
             }
 
@@ -119,7 +141,7 @@ namespace ImMillionaire.Brain.Core
             WebCallResult<BinanceOrder> orderRequest = Client.Margin.Order.GetMarginAccountOrder(BinanceSymbol.Name, orderId);
             if (!orderRequest.Success)
             {
-                Log.Fatal($"{orderRequest.Error?.Message}");
+                Log.Fatal("{0}", orderRequest.Error?.Message);
                 return false;
             }
 
@@ -149,7 +171,7 @@ namespace ImMillionaire.Brain.Core
         {
             if (string.IsNullOrWhiteSpace(listenKey))
             {
-                Log.Fatal($"ListenKey can't be null, maybe you have Api key Restrict access to trusted IPs only enabled");
+                Log.Fatal("ListenKey can't be null, maybe you have Api key Restrict access to trusted IPs only enabled");
                 GetListenKey();
             }
             CallResult<UpdateSubscription> successAccount = SocketClient.Spot.SubscribeToUserDataUpdates(listenKey,
@@ -184,7 +206,7 @@ namespace ImMillionaire.Brain.Core
             }
             else
             {
-                Log.Fatal($"{result.Error?.Message} - GetListenKey");
+                Log.Fatal("{0} - GetListenKey", result.Error?.Message);
             }
         }
 
@@ -194,9 +216,15 @@ namespace ImMillionaire.Brain.Core
             {
                 await Task.Delay(new TimeSpan(0, 45, 0));
 
+                Log.Information("Check - KeepAliveListenKey");
                 if (!UserStream.KeepAliveUserStream(listenKey).Success)
                 {
-                    listenKey = UserStream.StartUserStream().Data;
+                    Log.Information("KeepAliveListenKey Fail execute GetListenKey");
+                    GetListenKey();
+                }
+                else
+                {
+                    Log.Information("KeepAliveListenKey Success");
                 }
             }
         }
@@ -225,9 +253,9 @@ namespace ImMillionaire.Brain.Core
             {
                 updateSubscription.Data.ConnectionLost += () =>
                 {
-                    SocketClient.Unsubscribe(updateSubscription.Data);
-                    callback();
-                    Log.Information("ConnectionLost");
+                   // SocketClient.Unsubscribe(updateSubscription.Data);
+                   // callback();
+                    Log.Fatal("ConnectionLost {0}", updateSubscription.Error?.Message);
                 };
 
                 updateSubscription.Data.Exception += (ex) =>
@@ -237,7 +265,7 @@ namespace ImMillionaire.Brain.Core
             }
             else
             {
-                Log.Fatal($"{updateSubscription.Error?.Message}");
+                Log.Fatal("UpdateSubscriptionAutoConnetionIfConnLost {0}", updateSubscription.Error?.Message);
             }
         }
 
@@ -261,7 +289,7 @@ namespace ImMillionaire.Brain.Core
             }
             else
             {
-                Log.Fatal($"{binanceMarginAccount.Error?.Message}");
+                Log.Fatal("{0}", binanceMarginAccount.Error?.Message);
             }
 
             return 0;

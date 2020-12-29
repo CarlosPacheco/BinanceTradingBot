@@ -14,8 +14,6 @@ namespace ImMillionaire.Brain
     {
         decimal marketPrice;
 
-        //MyCandle MyCandle = new MyCandle();
-
         public MyBotTrade() : base(Core.Enums.WalletType.Margin)
         {
         }
@@ -84,7 +82,7 @@ namespace ImMillionaire.Brain
                 }
                 else if (order.Status == OrderStatus.Canceled)
                 {
-                    Log.Information($"cancel buy");
+                    Log.Information("cancel buy");
                     PlacedOrder = null;
                 }
             }
@@ -92,7 +90,7 @@ namespace ImMillionaire.Brain
             {
                 if (order.Status == OrderStatus.Filled)
                 {
-                    Log.Information($"sell");
+                    Log.Information("sell");
                     PlacedOrder = null;
                 }
             }
@@ -102,7 +100,7 @@ namespace ImMillionaire.Brain
             if (PlacedOrder == null)
             {
                 decimal freeBalance = BinanceClient.GetFreeQuoteBalance();
-                if (freeBalance > 1)
+                if (freeBalance > 1 && OrderBook != null)
                 {
                     decimal price = OrderBook.LastBidPrice;
 
@@ -110,7 +108,7 @@ namespace ImMillionaire.Brain
                     {
                         if (price >= marketPrice)
                         {
-                            Log.Information($"place buy Market: {marketPrice} Bid: {price}");
+                            Log.Warning("place buy Market: {0} Bid: {1}", marketPrice, price);
 
                             // margin of safe to buy in the best price 0.02%
                             price = decimal.Round(marketPrice - marketPrice * (0.016m / 100), 2);
@@ -118,30 +116,21 @@ namespace ImMillionaire.Brain
 
                         if (price > marketPrice)
                         {
-                            Log.Information($"place buy Market: {marketPrice} Bid: {price}");
+                            Log.Warning("place buy Market: {0} Bid: {1}", marketPrice, price);
 
                             // margin of safe to buy in the best price 0.03%
                             price = decimal.Round(marketPrice - marketPrice * (0.022m / 100), 2);
                         }
                     }
 
-                    Log.Information($"buy Market: {marketPrice} new price: {price}");
-                    AccountBinanceSymbol account = BinanceClient.GetAccountBinanceSymbol();
-                    decimal stepSize = account.LotSizeFilter.StepSize;
-                    int decimalsStep = 0;
-                    if (stepSize != 0.0m)
-                    {
-                        for (decimalsStep = -1; stepSize < 1; decimalsStep++)
-                        {
-                            stepSize *= 10;
-                        }
-                    }
-                    Log.Information($"decimalsStep: {decimalsStep}");
-                    var amount = Utils.TruncateDecimal(freeBalance / price, 5);
+                    Log.Warning("buy Market: {0} new price: {1}", marketPrice, price);
+                   
+                    Log.Warning("old 5 - decimalsStep: {0}", BinanceClient.DecimalAmount);
+                    decimal amount = Utils.TruncateDecimal(freeBalance / price, BinanceClient.DecimalAmount);
 
                     if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, amount, price, TimeInForce.GoodTillCancel, out Order order))
                     {
-                        Log.Information($"place buy at: {price}");
+                        Log.Warning("place buy at: {0}", price);
                     }
                 }
             }
@@ -152,36 +141,26 @@ namespace ImMillionaire.Brain
             decimal percentage = 0.25m;
             decimal fee = 0.075m; //BNB fee
 
-            AccountBinanceSymbol account = BinanceClient.GetAccountBinanceSymbol();
-            decimal stepSize = account.LotSizeFilter.StepSize;
-            int decimalsStep = 0;
-            if (stepSize != 0.0m)
-            {
-                for (decimalsStep = -1; stepSize < 1; decimalsStep++)
-                {
-                    stepSize *= 10;
-                }
-            }
-            Log.Information($"decimalsStep: {decimalsStep}");
+            Log.Warning("decimalsStep: {0}", BinanceClient.DecimalAmount);
             decimal amount = PlacedOrder.Quantity;
             if (PlacedOrder.Commission > 0)
             {
-                amount = Utils.TruncateDecimal(PlacedOrder.Quantity - (PlacedOrder.Quantity * (fee / 100)), decimalsStep);//BNB fee
-                Log.Information($"buy Commission sell at: {(PlacedOrder.Quantity * 0.00075m)}");
+                amount = Utils.TruncateDecimal(PlacedOrder.Quantity - (PlacedOrder.Quantity * (fee / 100)), BinanceClient.DecimalAmount);//BNB fee
+                Log.Warning("buy Commission sell at: {0}", PlacedOrder.Quantity * 0.00075m);
                 percentage += fee;//recovery the fee
             }
 
-            var newPrice = decimal.Round(PlacedOrder.Price + PlacedOrder.Price * (percentage / 100), 2);
+            decimal newPrice = decimal.Round(PlacedOrder.Price + PlacedOrder.Price * (percentage / 100), 2);
             try
             {
                 if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, amount, newPrice, TimeInForce.GoodTillCancel, out Order order))
                 {
-                    Log.Information($"place sell at: {newPrice}");
+                    Log.Warning("place sell at: {0}", newPrice);
                 }
             }
             catch (Exception ex)
             {
-                Log.Information($"error sell price: {newPrice} amount: {amount} {ex.Message}");
+                Log.Fatal("error sell price: {0} amount: {1} {2}", newPrice, amount, ex.Message);
             }
         }
 

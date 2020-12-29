@@ -5,7 +5,6 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Trady.Core.Infrastructure;
@@ -86,19 +85,19 @@ namespace ImMillionaire.Brain.Core
             if (PlacedOrder == null)
             {
                 decimal freeBalance = BinanceClient.GetFreeQuoteBalance();
-                if (freeBalance > 1)
+                if (freeBalance > 1 && OrderBook != null)
                 {
                     var locallastBid = OrderBook.LastBidPrice;
 
                     // margin of safe to buy in the best price 0.02%
                     decimal price = decimal.Round(locallastBid - locallastBid * (0.02m / 100), 2);
-                    var amount = Utils.TruncateDecimal(freeBalance / price, 6);
+                    decimal amount = Utils.TruncateDecimal(freeBalance / price, BinanceClient.DecimalAmount);
 
                     if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, amount, price, TimeInForce.GoodTillCancel, out Order order))
                     {
                         PlacedOrder = order;
                         CheckBuyWasExecuted();
-                        Log.Warning($"place buy at: {price}");
+                        Log.Warning("place buy at: {0}", price);
                     }
                 }
             }

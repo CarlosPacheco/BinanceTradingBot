@@ -34,8 +34,12 @@ namespace ImMillionaire.Brain.Core
         private AccountBinanceSymbol BinanceSymbol { get; }
 
         public IBinanceClientMarket Market { get; set; }
+
         public IBinanceClientUserStream UserStream { get; set; }
+
         public IBinanceSocketClientBase BinanceSocketClientBase { get; set; }
+
+        public int DecimalAmount { get; set; }
 
         public BinanceClientSpot(ConfigOptions config)
         {
@@ -54,6 +58,15 @@ namespace ImMillionaire.Brain.Core
             if (symbol == null) throw new Exception("Symbol dont exist!");
             BinanceSymbol = new AccountBinanceSymbol(symbol);
 
+            decimal stepSize = symbol.LotSizeFilter.StepSize;
+            if (stepSize != 0.0m)
+            {
+                for (DecimalAmount = 0; stepSize < 1; DecimalAmount++)
+                {
+                    stepSize *= 10;
+                }
+            }
+
             Market = Client.Spot.Market;
             UserStream = Client.Spot.UserStream;
             BinanceSocketClientBase = SocketClient.Spot;
@@ -68,7 +81,7 @@ namespace ImMillionaire.Brain.Core
             }
             else
             {
-                Log.Fatal($"{klines.Error?.Message}");
+                Log.Fatal("{0}", klines.Error?.Message);
             }
 
             return null;
@@ -90,7 +103,7 @@ namespace ImMillionaire.Brain.Core
             WebCallResult<BinancePlacedOrder> orderRequest = Client.Spot.Order.PlaceOrder(BinanceSymbol.Name, side, type, quantity, null, null, price, timeInForce);
             if (!orderRequest.Success)
             {
-                Log.Fatal($"{orderRequest.Error?.Message}");
+                Log.Fatal("{0}", orderRequest.Error?.Message);
                 return false;
             }
 
@@ -104,7 +117,7 @@ namespace ImMillionaire.Brain.Core
             WebCallResult<BinanceOrder> orderRequest = Client.Spot.Order.GetOrder(BinanceSymbol.Name, orderId);
             if (!orderRequest.Success)
             {
-                Log.Fatal($"{orderRequest.Error?.Message}");
+                Log.Fatal("{0}", orderRequest.Error?.Message);
                 return false;
             }
 
@@ -127,8 +140,8 @@ namespace ImMillionaire.Brain.Core
             WebCallResult<BinancePlacedOrder> orderRequest = await Client.Spot.Order.PlaceOrderAsync(BinanceSymbol.Name, side, type, quantity, null, null, price, timeInForce);
             if (!orderRequest.Success)
             {
-                Log.Warning($"error place {side} at: {price} {orderRequest.Error.Message}");
-                Log.Fatal($"{orderRequest.Error?.Message}");
+                Log.Information("error place {0} at: {1}", side, price);
+                Log.Fatal("{0}", orderRequest.Error?.Message);
                 return (false, null);
             }
 
@@ -159,9 +172,9 @@ namespace ImMillionaire.Brain.Core
             {
                 updateSubscription.Data.ConnectionLost += () =>
                 {
-                    SocketClient.Unsubscribe(updateSubscription.Data);
-                    callback();
-                    Log.Information("ConnectionLost");
+                    //SocketClient.Unsubscribe(updateSubscription.Data);
+                    //callback();
+                    Log.Fatal("ConnectionLost {0}", updateSubscription.Error?.Message);
                 };
 
                 updateSubscription.Data.Exception += (ex) =>
@@ -171,7 +184,7 @@ namespace ImMillionaire.Brain.Core
             }
             else
             {
-                Log.Fatal($"{updateSubscription.Error?.Message}");
+                Log.Fatal("{0}", updateSubscription.Error?.Message);
             }
         }
 
@@ -192,7 +205,7 @@ namespace ImMillionaire.Brain.Core
             }
             else
             {
-                Log.Fatal($"{result.Error?.Message} - GetListenKey");
+                Log.Fatal("{0} - GetListenKey", result.Error?.Message);
             }
         }
 
@@ -213,7 +226,7 @@ namespace ImMillionaire.Brain.Core
         {
             if (string.IsNullOrWhiteSpace(listenKey))
             {
-                Log.Fatal($"ListenKey can't be null, maybe you have Api key Restrict access to trusted IPs only enabled");
+                Log.Fatal("ListenKey can't be null, maybe you have Api key Restrict access to trusted IPs only enabled");
                 GetListenKey();
             }
 
@@ -260,7 +273,7 @@ namespace ImMillionaire.Brain.Core
             }
             else
             {
-                Log.Fatal($"{binanceMarginAccount.Error?.Message}");
+                Log.Fatal("{0}", binanceMarginAccount.Error?.Message);
             }
 
             return 0;

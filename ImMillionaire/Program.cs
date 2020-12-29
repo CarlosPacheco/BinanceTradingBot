@@ -13,7 +13,13 @@ namespace ImMillionaire
         {
             IConfiguration configuration = new ConfigurationBuilder()
               .SetBasePath(Directory.GetCurrentDirectory())
-              .AddJsonFile("appsettings.json").Build();
+              .AddJsonFile("appsettings.json")
+#if PROD
+        .AddJsonFile("appsettings.Production.json", optional: false, reloadOnChange: true);
+#else // DEBUG
+        .AddJsonFile("appsettings.Development.json")
+#endif
+        .Build();
             Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(configuration).CreateLogger();
 
             StartAll();
@@ -23,12 +29,12 @@ namespace ImMillionaire
         {
             try
             {
-               //  using (BaseBot trader = new MyBotTradeConservative())
+                //  using (BaseBot trader = new MyBotTradeConservative())
                 using (BaseBot trader = new MyBotTrade())
                 // using (BaseBot traderFuture = new TraderFutures())
                 {
                     trader.Start();
-                 //   traderFuture.Start();
+                    //   traderFuture.Start();
 
                     Console.ReadLine();
                 }
@@ -41,7 +47,7 @@ namespace ImMillionaire
 
                 Log.Information("Trying again...");
             }
-         
+
         }
     }
 }
