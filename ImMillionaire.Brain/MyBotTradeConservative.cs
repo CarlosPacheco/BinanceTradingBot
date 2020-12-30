@@ -1,5 +1,6 @@
 ﻿using Binance.Net.Enums;
 using ImMillionaire.Brain.Core;
+using Microsoft.Extensions.Options;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ namespace ImMillionaire.Brain
 
         MyCandle MyCandle = new MyCandle();
 
-        public MyBotTradeConservative() : base(Core.Enums.WalletType.Margin)
+        public MyBotTradeConservative(IOptions<ConfigOptions> config) : base(config, Core.Enums.WalletType.Margin)
         {
         }
 

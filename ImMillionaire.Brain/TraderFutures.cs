@@ -1,5 +1,6 @@
 ﻿using Binance.Net.Enums;
 using ImMillionaire.Brain.Core;
+using Microsoft.Extensions.Options;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -14,7 +15,7 @@ namespace ImMillionaire.Brain
         decimal marketPrice;
         MyCandle MyCandle = new MyCandle();
 
-        public TraderFutures() : base(Core.Enums.WalletType.Futures)
+        public TraderFutures(IOptions<ConfigOptions> config) : base(config, Core.Enums.WalletType.Futures)
         {
         }
 

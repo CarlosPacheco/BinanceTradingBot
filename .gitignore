@@ -48,4 +48,5 @@ bin
 obj
 packages
 .vs
+/ImMillionaire/appsettings.Local.Development.json
 /ImMillionaire.Brain/config_1.json

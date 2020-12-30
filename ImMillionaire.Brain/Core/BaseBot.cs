@@ -1,10 +1,9 @@
 ﻿using Binance.Net.Enums;
 using ImMillionaire.Brain.Core.Enums;
-using Newtonsoft.Json;
+using Microsoft.Extensions.Options;
 using Serilog;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Trady.Core.Infrastructure;
@@ -14,8 +13,6 @@ namespace ImMillionaire.Brain.Core
     public abstract class BaseBot : IDisposable
     {
         protected IBinanceClient BinanceClient { get; set; }
-
-        private ConfigOptions Configuration { get; }
 
         private AccountBinanceSymbol BinanceSymbol { get; set; }
 
@@ -27,22 +24,19 @@ namespace ImMillionaire.Brain.Core
 
         protected Dictionary<KlineInterval, IList<IOhlcv>> Candlesticks { get; set; } = new Dictionary<KlineInterval, IList<IOhlcv>>();
 
-        public BaseBot(WalletType walletType)
+        public BaseBot(IOptions<ConfigOptions> config, WalletType walletType)
         {
-            /* Binance Configuration */
-            Configuration = JsonConvert.DeserializeObject<ConfigOptions>(File.ReadAllText("config.json"));
-
             //binance client factory
             switch (walletType)
             {
                 case WalletType.Spot:
-                    BinanceClient = new BinanceClientSpot(Configuration);
+                    BinanceClient = new BinanceClientSpot(config);
                     break;
                 case WalletType.Margin:
-                    BinanceClient = new BinanceClientMargin(Configuration);
+                    BinanceClient = new BinanceClientMargin(config);
                     break;
                 case WalletType.Futures:
-                    BinanceClient = new BinanceClientFutures(Configuration);
+                    BinanceClient = new BinanceClientFutures(config);
                     break;
             }
         }

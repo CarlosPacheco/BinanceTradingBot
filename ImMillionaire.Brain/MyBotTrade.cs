@@ -1,5 +1,6 @@
 ﻿using Binance.Net.Enums;
 using ImMillionaire.Brain.Core;
+using Microsoft.Extensions.Options;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -14,7 +15,7 @@ namespace ImMillionaire.Brain
     {
         decimal marketPrice;
 
-        public MyBotTrade() : base(Core.Enums.WalletType.Margin)
+        public MyBotTrade(IOptions<ConfigOptions> config) : base(config, Core.Enums.WalletType.Margin)
         {
         }
 
@@ -125,7 +126,6 @@ namespace ImMillionaire.Brain
 
                     Log.Warning("buy Market: {0} new price: {1}", marketPrice, price);
                    
-                    Log.Warning("old 5 - decimalsStep: {0}", BinanceClient.DecimalAmount);
                     decimal amount = Utils.TruncateDecimal(freeBalance / price, BinanceClient.DecimalAmount);
 
                     if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, amount, price, TimeInForce.GoodTillCancel, out Order order))
