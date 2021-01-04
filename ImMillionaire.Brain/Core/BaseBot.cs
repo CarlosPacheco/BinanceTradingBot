@@ -10,7 +10,7 @@ using Trady.Core.Infrastructure;
 
 namespace ImMillionaire.Brain.Core
 {
-    public abstract class BaseBot : IDisposable
+    public abstract class BaseBot : IBotTrade, IDisposable
     {
         protected IBinanceClient BinanceClient { get; set; }
 
@@ -23,6 +23,8 @@ namespace ImMillionaire.Brain.Core
         protected Order PlacedOrder { get; set; }
 
         protected Dictionary<KlineInterval, IList<IOhlcv>> Candlesticks { get; set; } = new Dictionary<KlineInterval, IList<IOhlcv>>();
+
+        protected CancellationTokenSource tokenSource = new CancellationTokenSource();
 
         public BaseBot(IOptions<ConfigOptions> config, WalletType walletType)
         {
@@ -137,7 +139,7 @@ namespace ImMillionaire.Brain.Core
                         BinanceClient.CancelOrderAsync(PlacedOrder.OrderId);
                     }
                 }
-            });
+            }, tokenSource.Token);
         }
 
         public void Dispose()

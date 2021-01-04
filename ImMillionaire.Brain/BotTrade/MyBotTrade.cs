@@ -10,7 +10,6 @@ using Trady.Core.Infrastructure;
 
 namespace ImMillionaire.Brain
 {
-
     public class MyBotTrade : BaseBot
     {
         decimal marketPrice;
@@ -71,20 +70,31 @@ namespace ImMillionaire.Brain
             // Handle order update info data
             if (order.Side == OrderSide.Buy)
             {
-                if (order.Status == OrderStatus.New)
+                Log.Information("Order {@order} update- {order.Status}", order.Status);
+
+                switch (order.Status)
                 {
-                    PlacedOrder = order;
-                    CheckBuyWasExecuted(40);
-                }
-                else if (order.Status == OrderStatus.Filled)
-                {
-                    PlacedOrder = order;
-                    SellLimit();
-                }
-                else if (order.Status == OrderStatus.Canceled)
-                {
-                    Log.Information("cancel buy");
-                    PlacedOrder = null;
+                    case OrderStatus.New:
+                        PlacedOrder = order;
+                        CheckBuyWasExecuted(40);
+                        break;
+                    case OrderStatus.PartiallyFilled:
+                        tokenSource.Cancel();
+                        Log.Information("cancel CheckBuyWasExecuted");
+                        break;
+                    case OrderStatus.Filled:
+                        PlacedOrder = order;
+                        SellLimit();
+                        break;
+                    case OrderStatus.Canceled:
+                    case OrderStatus.PendingCancel:
+                    case OrderStatus.Rejected:
+                    case OrderStatus.Expired:
+                        Log.Information("cancel buy");
+                        PlacedOrder = null;
+                        break;
+                    default:
+                        break;
                 }
             }
             else //OrderSide.Sell
@@ -107,25 +117,20 @@ namespace ImMillionaire.Brain
 
                     if (marketPrice > 0)
                     {
-                        if (price >= marketPrice)
+                        // margin of safe to buy in the best price 0.02%
+                        decimal marginOfSafe = 0.021m;
+                        while (price >= marketPrice)
                         {
                             Log.Warning("place buy Market: {0} Bid: {1}", marketPrice, price);
 
                             // margin of safe to buy in the best price 0.02%
-                            price = decimal.Round(marketPrice - marketPrice * (0.016m / 100), 2);
-                        }
-
-                        if (price > marketPrice)
-                        {
-                            Log.Warning("place buy Market: {0} Bid: {1}", marketPrice, price);
-
-                            // margin of safe to buy in the best price 0.03%
-                            price = decimal.Round(marketPrice - marketPrice * (0.022m / 100), 2);
+                            price = decimal.Round(marketPrice - marketPrice * (marginOfSafe / 100), 2);
+                            marginOfSafe += 0.004m;
                         }
                     }
 
                     Log.Warning("buy Market: {0} new price: {1}", marketPrice, price);
-                   
+
                     decimal amount = Utils.TruncateDecimal(freeBalance / price, BinanceClient.DecimalAmount);
 
                     if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, amount, price, TimeInForce.GoodTillCancel, out Order order))
