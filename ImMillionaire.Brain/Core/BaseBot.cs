@@ -1,6 +1,5 @@
 ﻿using Binance.Net.Enums;
 using ImMillionaire.Brain.Core.Enums;
-using Microsoft.Extensions.Options;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -22,25 +21,13 @@ namespace ImMillionaire.Brain.Core
 
         protected Order PlacedOrder { get; set; }
 
-        protected Dictionary<KlineInterval, IList<IOhlcv>> Candlesticks { get; set; } = new Dictionary<KlineInterval, IList<IOhlcv>>();
+        protected Dictionary<KlineInterval, IList<IOhlcv>> Candlesticks { get; } = new Dictionary<KlineInterval, IList<IOhlcv>>();
 
         protected CancellationTokenSource tokenSource = new CancellationTokenSource();
 
-        public BaseBot(IOptions<ConfigOptions> config, WalletType walletType)
+        public BaseBot(IBinanceClientFactory factory, WalletType walletType)
         {
-            //binance client factory
-            switch (walletType)
-            {
-                case WalletType.Spot:
-                    BinanceClient = new BinanceClientSpot(config);
-                    break;
-                case WalletType.Margin:
-                    BinanceClient = new BinanceClientMargin(config);
-                    break;
-                case WalletType.Futures:
-                    BinanceClient = new BinanceClientFutures(config);
-                    break;
-            }
+            BinanceClient = factory.GetBinanceClient(walletType);
         }
 
         public void Start()

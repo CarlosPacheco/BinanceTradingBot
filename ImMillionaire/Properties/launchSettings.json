@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ImMillionaire": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

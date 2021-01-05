@@ -14,8 +14,11 @@ namespace ImMillionaire.Brain
     {
         decimal marketPrice;
 
-        public MyBotTrade(IOptions<ConfigOptions> config) : base(config, Core.Enums.WalletType.Margin)
+        public ConfigOptions Config { get; }
+
+        public MyBotTrade(IBinanceClientFactory factory, IOptions<ConfigOptions> config) : base(factory, Core.Enums.WalletType.Margin)
         {
+            Config = config.Value;
         }
 
         protected override void RegisterCandlestickUpdates()
@@ -70,7 +73,7 @@ namespace ImMillionaire.Brain
             // Handle order update info data
             if (order.Side == OrderSide.Buy)
             {
-                Log.Information("Order {@order} update- {order.Status}", order.Status);
+                Log.Information("Order {@Order} update- {0}", order.Status);
 
                 switch (order.Status)
                 {
@@ -118,7 +121,7 @@ namespace ImMillionaire.Brain
                     if (marketPrice > 0)
                     {
                         // margin of safe to buy in the best price 0.02%
-                        decimal marginOfSafe = 0.021m;
+                        decimal marginOfSafe = Config.BuyMarginOfSafe;
                         while (price >= marketPrice)
                         {
                             Log.Warning("place buy Market: {0} Bid: {1}", marketPrice, price);
@@ -143,7 +146,7 @@ namespace ImMillionaire.Brain
 
         public override void SellLimit()
         {
-            decimal percentage = 0.25m;
+            decimal percentage = Config.SellPercentage;
             decimal fee = 0.075m; //BNB fee
 
             Log.Warning("decimalsStep: {0}", BinanceClient.DecimalAmount);

@@ -2,6 +2,6 @@
 {
     public interface IBotTradeManager
     {
-        void Start();
+        void Run();
     }
 }

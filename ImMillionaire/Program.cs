@@ -1,18 +1,30 @@
 ﻿using ImMillionaire.Brain.Core;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 using ImMillionaire.Brain.BotTrade;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
 
 namespace ImMillionaire
 {
     class Program
     {
-        public static readonly IServiceProvider serviceProvider = ContainerBuilder.Build();
-
         static void Main(string[] args)
         {
-            IBotTradeManager botTradeManager = serviceProvider.GetService<IBotTradeManager>();
-            botTradeManager.Start();
+            CreateHostBuilder(args).Build()
+                .Services.GetService<IBotTradeManager>().Run();
         }
+
+        public static IHostBuilder CreateHostBuilder(string[] args) =>
+            Host.CreateDefaultBuilder(args).ConfigureAppConfiguration((hostingContext, config) =>
+             {
+                 config.AddJsonFile("appsettings.json")
+                 .AddJsonFile($"appsettings.{hostingContext.HostingEnvironment.EnvironmentName}.json")
+#if DEBUG
+                 .AddJsonFile("appsettings.Local.Development.json", optional: true, reloadOnChange: true)
+#endif
+                 .AddEnvironmentVariables();
+             })
+            .ConfigureServices((hostingContext, services) => ContainerBuilder.DependencyInjection(services, hostingContext.Configuration));
     }
 }
+

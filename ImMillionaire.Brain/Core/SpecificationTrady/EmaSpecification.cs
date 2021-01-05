@@ -18,7 +18,7 @@ namespace ImMillionaire.Brain.Core.SpecificationTrady
 
         public override bool IsSatisfiedBy(IList<IOhlcv> candidate)
         {
-          //  new EmaSpecification(14, 70).And(new EmaSpecification(14, 50));
+            //  new EmaSpecification(14, 70).And(new EmaSpecification(14, 50));
             return candidate.Rsi(periodCount).Last().Tick.Value > value;
         }
     }

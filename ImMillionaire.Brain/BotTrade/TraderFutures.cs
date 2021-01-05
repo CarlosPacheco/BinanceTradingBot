@@ -15,7 +15,7 @@ namespace ImMillionaire.Brain
         decimal marketPrice;
         MyCandle MyCandle = new MyCandle();
 
-        public TraderFutures(IOptions<ConfigOptions> config) : base(config, Core.Enums.WalletType.Futures)
+        public TraderFutures(IBinanceClientFactory factory) : base(factory, Core.Enums.WalletType.Futures)
         {
         }
 

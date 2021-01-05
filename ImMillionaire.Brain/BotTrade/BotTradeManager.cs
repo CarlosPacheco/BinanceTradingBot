@@ -14,7 +14,7 @@ namespace ImMillionaire.Brain.BotTrade
             BotTrade = botTrade;
         }
 
-        public void Start()
+        public void Run()
         {
             try
             {
@@ -24,7 +24,7 @@ namespace ImMillionaire.Brain.BotTrade
             catch (Exception ex)
             {
                 Logger.Fatal(ex, "Host terminated unexpectedly. Trying again...");
-                Start();
+                Run();
             }
         }
     }

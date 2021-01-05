@@ -14,7 +14,7 @@ namespace ImMillionaire.Brain
 
         MyCandle MyCandle = new MyCandle();
 
-        public MyBotTradeConservative(IOptions<ConfigOptions> config) : base(config, Core.Enums.WalletType.Margin)
+        public MyBotTradeConservative(IBinanceClientFactory factory) : base(factory, Core.Enums.WalletType.Margin)
         {
         }
 
