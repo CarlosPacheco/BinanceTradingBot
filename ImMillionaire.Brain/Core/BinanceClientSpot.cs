@@ -1,5 +1,6 @@
 ﻿using Binance.Net.Enums;
 using Binance.Net.Interfaces;
+using Binance.Net.Interfaces.SocketSubClient;
 using Binance.Net.Objects.Spot.MarketData;
 using Binance.Net.Objects.Spot.SpotData;
 using Binance.Net.Objects.Spot.UserStream;
@@ -15,11 +16,13 @@ namespace ImMillionaire.Brain.Core
 {
     public class BinanceClientSpot : BinanceClientBase, IBinanceClient
     {
+        public IBinanceSocketClientSpot BinanceSocketClientSpot { get; }
+
         public BinanceClientSpot(IOptions<ConfigOptions> config) : base(config)
         {
             Market = Client.Spot.Market;
             UserStream = Client.Spot.UserStream;
-            BinanceSocketClientBase = SocketClient.Spot;
+            BinanceSocketClientBase = BinanceSocketClientSpot = SocketClient.Spot;
 
             BinanceSymbol symbol = Client.Spot.System.GetExchangeInfo().Data.Symbols.FirstOrDefault(x => x.Name == Configuration.Symbol);
             if (symbol == null) throw new Exception("Symbol dont exist!");
@@ -94,7 +97,7 @@ namespace ImMillionaire.Brain.Core
                 GetListenKey();
             }
 
-            CallResult<UpdateSubscription> successAccount = SocketClient.Spot.SubscribeToUserDataUpdates(listenKey,
+            CallResult<UpdateSubscription> successAccount = BinanceSocketClientSpot.SubscribeToUserDataUpdates(listenKey,
             null,// Handle account info data
             (BinanceStreamOrderUpdate data) => orderUpdate(new Order(data)), // Handle order update info data
             null, // Handler for OCO updates
@@ -106,7 +109,7 @@ namespace ImMillionaire.Brain.Core
 
         private void SubscribeToOrderBookUpdates(Action<EventOrderBook> eventOrderBook)
         {
-            CallResult<UpdateSubscription> successDepth = SocketClient.Spot.SubscribeToOrderBookUpdates(BinanceSymbol.Name, 1000, (IBinanceOrderBook data) =>
+            CallResult<UpdateSubscription> successDepth = BinanceSocketClientSpot.SubscribeToOrderBookUpdates(BinanceSymbol.Name, 1000, (IBinanceEventOrderBook data) =>
             {
                 if (data.Asks.Any() && data.Bids.Any())
                 {

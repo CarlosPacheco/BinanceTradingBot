@@ -43,7 +43,14 @@ namespace ImMillionaire.Brain.Core
             // Candlesticks
             RegisterCandlestickUpdates();
 
-            BinanceClient.StartSocketConnections(EventOrderBook, OrderUpdate);
+            BinanceClient.StartSocketConnections(EventOrderBook, order =>
+            {
+                if (order.Status == OrderStatus.New || (PlacedOrder != null && order.OrderId == PlacedOrder.OrderId))
+                {
+                    Log.Information("Order {0} equals {1}", order.OrderId, PlacedOrder?.OrderId);
+                }
+                OrderUpdate(order);
+            });
 
             Log.Information("Bot end init");
         }
@@ -114,6 +121,12 @@ namespace ImMillionaire.Brain.Core
 
         protected void CheckBuyWasExecuted(int waitSecondsBeforeCancel = 60)
         {
+            if (tokenSource.IsCancellationRequested)
+            {
+                tokenSource.Dispose();
+                tokenSource = new CancellationTokenSource();
+            }
+
             Task.Run(() =>
             {
                 Thread.Sleep(TimeSpan.FromSeconds(waitSecondsBeforeCancel));
@@ -131,6 +144,7 @@ namespace ImMillionaire.Brain.Core
 
         public void Dispose()
         {
+            tokenSource?.Dispose();
             BinanceClient.Dispose();
         }
     }

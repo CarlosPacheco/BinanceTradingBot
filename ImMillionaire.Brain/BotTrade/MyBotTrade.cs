@@ -70,11 +70,10 @@ namespace ImMillionaire.Brain
 
         protected override void OrderUpdate(Order order)
         {
+            Log.Information("Order {@Order}", order);
             // Handle order update info data
             if (order.Side == OrderSide.Buy)
             {
-                Log.Information("Order {@Order} update- {0}", order.Status);
-
                 switch (order.Status)
                 {
                     case OrderStatus.New:
@@ -83,7 +82,7 @@ namespace ImMillionaire.Brain
                         break;
                     case OrderStatus.PartiallyFilled:
                         tokenSource.Cancel();
-                        Log.Information("cancel CheckBuyWasExecuted");
+                        Log.Information("Cancel CheckBuyWasExecuted");
                         break;
                     case OrderStatus.Filled:
                         PlacedOrder = order;
@@ -93,7 +92,7 @@ namespace ImMillionaire.Brain
                     case OrderStatus.PendingCancel:
                     case OrderStatus.Rejected:
                     case OrderStatus.Expired:
-                        Log.Information("cancel buy");
+                        Log.Information("Cancel buy");
                         PlacedOrder = null;
                         break;
                     default:
@@ -102,9 +101,14 @@ namespace ImMillionaire.Brain
             }
             else //OrderSide.Sell
             {
-                if (order.Status == OrderStatus.Filled)
+                if (order.Status == OrderStatus.New)
                 {
-                    Log.Information("sell");
+                    Log.Information("New");
+                    PlacedOrder = null;
+                }
+                else if (order.Status == OrderStatus.Filled)
+                {
+                    Log.Information("Sell");
                     PlacedOrder = null;
                 }
             }
@@ -124,8 +128,11 @@ namespace ImMillionaire.Brain
                         decimal marginOfSafe = Config.BuyMarginOfSafe;
                         while (price >= marketPrice)
                         {
+                            decimal bidAskSpread = decimal.Round((OrderBook.LastAskPrice - OrderBook.LastBidPrice) / OrderBook.LastAskPrice * 100, 3);
+                            decimal dynamicMarginOfSafe = decimal.Round(price * 100 / marketPrice - 100, 3);
                             Log.Warning("place buy Market: {0} Bid: {1}", marketPrice, price);
-
+                            if (dynamicMarginOfSafe > marginOfSafe) marginOfSafe = dynamicMarginOfSafe;
+                            Log.Warning(" margin of safe buy dynamicMarginOfSafe: {0} marginOfSafe: {1} bidAskSpread: {2}", dynamicMarginOfSafe, marginOfSafe, bidAskSpread);
                             // margin of safe to buy in the best price 0.02%
                             price = decimal.Round(marketPrice - marketPrice * (marginOfSafe / 100), 2);
                             marginOfSafe += 0.004m;

@@ -1,6 +1,5 @@
 ﻿using Binance.Net.Enums;
 using ImMillionaire.Brain.Core;
-using Microsoft.Extensions.Options;
 using Serilog;
 using System;
 using System.Collections.Generic;

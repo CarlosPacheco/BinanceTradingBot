@@ -83,7 +83,7 @@ namespace ImMillionaire.Brain.Core
         /// The symbol the order is for
         /// </summary>
         public string Symbol { get; set; }
- 
+
         /// <summary>
         /// The asset the commission was taken from
         /// </summary>
@@ -136,26 +136,43 @@ namespace ImMillionaire.Brain.Core
             Symbol = binanceOrder.Symbol;
         }
 
-        public Order(BinanceStreamOrderUpdate data)
+        public Order(BinanceStreamOrderUpdate binanceOrder)
         {
-            Side = data.Side;
-            Status = data.Status;
-            OrderId = data.OrderId;
-            Price = data.Price;
-            Quantity = data.Quantity;
-            CommissionAsset = data.CommissionAsset;
-            Commission = data.Commission;
+            CreateTime = binanceOrder.CreateTime;
+            Side = binanceOrder.Side;
+            StopPrice = binanceOrder.StopPrice;
+            Type = binanceOrder.Type;
+            TimeInForce = binanceOrder.TimeInForce;
+            Status = binanceOrder.Status;
+            QuoteQuantity = binanceOrder.QuoteQuantity;
+            QuoteQuantityFilled = binanceOrder.QuoteQuantityFilled;
+            QuantityFilled = binanceOrder.QuantityFilled;
+            Quantity = binanceOrder.Quantity;
+            Price = binanceOrder.Price;
+            OriginalClientOrderId = binanceOrder.OriginalClientOrderId;
+            ClientOrderId = binanceOrder.ClientOrderId;
+            OrderId = binanceOrder.OrderId;
+            Symbol = binanceOrder.Symbol;
+            CommissionAsset = binanceOrder.CommissionAsset;
+            Commission = binanceOrder.Commission;
         }
 
-        public Order(BinanceFuturesStreamOrderUpdateData data)
+        public Order(BinanceFuturesStreamOrderUpdateData binanceOrder)
         {
-            Side = data.Side;
-            Status = data.Status;
-            OrderId = data.OrderId;
-            Price = data.Price;
-            Quantity = data.Quantity;
-            CommissionAsset = data.CommissionAsset;
-            Commission = data.Commission;
+            CreateTime = binanceOrder.CreateTime;
+            Side = binanceOrder.Side;
+            StopPrice = binanceOrder.StopPrice;
+            Type = binanceOrder.Type;
+            TimeInForce = binanceOrder.TimeInForce;
+            Status = binanceOrder.Status;
+            QuantityFilled = binanceOrder.AccumulatedQuantityOfFilledTrades;
+            Quantity = binanceOrder.Quantity;
+            Price = binanceOrder.Price;
+            ClientOrderId = binanceOrder.ClientOrderId;
+            OrderId = binanceOrder.OrderId;
+            Symbol = binanceOrder.Symbol;
+            CommissionAsset = binanceOrder.CommissionAsset;
+            Commission = binanceOrder.Commission;
         }
 
         public Order(BinanceFuturesOrder binanceOrder)

@@ -15,26 +15,6 @@ namespace ImMillionaire.Brain.Core
 {
     public class ContainerBuilder
     {
-        public static IServiceProvider Build()
-        {
-            // Create service collection and configure our services
-            IServiceCollection services = new ServiceCollection();
-
-            IConfiguration Configuration = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json")
-            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("NETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true, reloadOnChange: true)
-#if DEBUG
-            .AddJsonFile("appsettings.Local.Development.json", optional: true, reloadOnChange: true)
-#endif
-            .AddEnvironmentVariables()
-            .Build();
-            DependencyInjection(services, Configuration);
-
-            // Generate a provider
-            return services.BuildServiceProvider();
-        }
-
         public static void DependencyInjection(IServiceCollection services, IConfiguration Configuration)
         {
             services.AddSingleton(config => Configuration);
