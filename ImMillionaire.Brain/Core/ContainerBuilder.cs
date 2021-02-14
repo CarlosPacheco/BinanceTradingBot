@@ -19,9 +19,8 @@ namespace ImMillionaire.Brain.Core
         {
             services.AddSingleton(config => Configuration);
             // IoC Logger 
-            ILogger logger = Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(Configuration).CreateLogger();
-            services.AddSingleton(logger);
-
+            services.AddSingleton<ILogger>(new LoggerConfiguration().ReadFrom.Configuration(Configuration).CreateLogger());
+            services.AddSingleton<TextWriterLogger>();
             ConfigOptions config = Configuration.GetSection(ConfigOptions.Position).Get<ConfigOptions>();
 
             // Add functionality to inject IOptions<T>
@@ -33,22 +32,26 @@ namespace ImMillionaire.Brain.Core
             services.AddSingleton<IBotTradeManager, BotTradeManager>();
             services.AddSingleton<IBinanceClientFactory, BinanceClientFactory>();
 
-            services.AddTransient<IBinanceSocketClient>(_ =>
+            services.AddTransient<IBinanceSocketClient>(serviceProvider =>
              new BinanceSocketClient(new BinanceSocketClientOptions()
              {
                  ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey),
                  SocketNoDataTimeout = TimeSpan.FromMinutes(5),
                  ReconnectInterval = TimeSpan.FromSeconds(1),
-                 // LogVerbosity = CryptoExchange.Net.Logging.LogVerbosity.Debug,
-                 LogWriters = new List<TextWriter> { TextWriterLogger.Out }
+#if DEBUG
+                 LogVerbosity = CryptoExchange.Net.Logging.LogVerbosity.Error,
+                 LogWriters = new List<TextWriter> { serviceProvider.GetService<TextWriterLogger>() }
+#endif
              }));
 
-            services.AddTransient<Binance.Net.Interfaces.IBinanceClient>(_ =>
+            services.AddTransient<Binance.Net.Interfaces.IBinanceClient>(serviceProvider =>
             new BinanceClient(new BinanceClientOptions()
             {
                 ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey),
-                LogWriters = new List<TextWriter> { TextWriterLogger.Out }
-                //LogVerbosity = CryptoExchange.Net.Logging.LogVerbosity.Debug,
+#if DEBUG
+                LogWriters = new List<TextWriter> { serviceProvider.GetService<TextWriterLogger>() },
+                LogVerbosity = CryptoExchange.Net.Logging.LogVerbosity.Error,
+#endif
                 //AutoTimestamp = true,
                 //AutoTimestampRecalculationInterval = TimeSpan.FromMinutes(30),
             }));

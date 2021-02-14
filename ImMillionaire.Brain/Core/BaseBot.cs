@@ -1,5 +1,5 @@
 ﻿using Binance.Net.Enums;
-using ImMillionaire.Brain.Core.Enums;
+using ImMillionaire.Brain.Models;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -11,9 +11,10 @@ namespace ImMillionaire.Brain.Core
 {
     public abstract class BaseBot : IBotTrade, IDisposable
     {
-        protected IBinanceClient BinanceClient { get; set; }
+        private readonly IBinanceClientFactory _factory;
+        protected ILogger Logger { get; }
 
-        private AccountBinanceSymbol BinanceSymbol { get; set; }
+        protected IBinanceClient BinanceClient { get; set; }
 
         protected EventOrderBook OrderBook { get; set; }
 
@@ -25,34 +26,45 @@ namespace ImMillionaire.Brain.Core
 
         protected CancellationTokenSource tokenSource = new CancellationTokenSource();
 
-        public BaseBot(IBinanceClientFactory factory, WalletType walletType)
+        protected Bot Bot { get; set; }
+
+        protected decimal MarketPrice { get; set; }
+
+        public BaseBot(IBinanceClientFactory factory, ILogger logger)
         {
-            BinanceClient = factory.GetBinanceClient(walletType);
+            _factory = factory;
+            Logger = logger;
         }
 
-        public void Start()
+        public void Start(Bot bot)
         {
-            Log.Information("Bot Starting host...");
+            Logger.Information("Bot Starting host...");
+            Bot = bot;
+            BinanceClient = _factory.GetBinanceClient(Bot.Type);
 
             // Public
             Ping = BinanceClient.Ping();
-            BinanceSymbol = BinanceClient.GetAccountBinanceSymbol();
 
-            Log.Information("BinanceSymbol: {0}", BinanceSymbol.Name);
+            BinanceClient.StartSocketConnections(bot.Symbol, EventOrderBook, InternalOrderUpdate);
 
             // Candlesticks
+            SubscribeCandlesticks(KlineInterval.OneMinute, InternalKlineUpdates);
             RegisterCandlestickUpdates();
 
-            BinanceClient.StartSocketConnections(EventOrderBook, order =>
-            {
-                if (order.Status == OrderStatus.New || (PlacedOrder != null && order.OrderId == PlacedOrder.OrderId))
-                {
-                    Log.Information("Order {0} equals {1}", order.OrderId, PlacedOrder?.OrderId);
-                }
-                OrderUpdate(order);
-            });
+            Logger.Information("Bot end init");
+        }
 
-            Log.Information("Bot end init");
+        private void InternalOrderUpdate(Order order)
+        {
+            if (PlacedOrder == null || order.Symbol != Bot.Symbol || order.OrderId != PlacedOrder.OrderId) return;
+
+            OrderUpdate(order);
+        }
+
+        private void InternalKlineUpdates(IList<IOhlcv> candlesticks, Candlestick candle)
+        {
+            MarketPrice = candle.Close;
+            KlineUpdates(candlesticks, candle);
         }
 
         protected void SubscribeCandlesticks(KlineInterval klineInterval, Action<IList<IOhlcv>, Candlestick> CandlestickUpdate)
@@ -62,7 +74,7 @@ namespace ImMillionaire.Brain.Core
             BinanceClient.SubscribeToKlineUpdates(Candlestick, klineInterval, CandlestickUpdate);
         }
 
-        // protected abstract void KlineUpdates(IList<IOhlcv> candlestick, Candlestick candle);
+        protected abstract void KlineUpdates(IList<IOhlcv> candlesticks, Candlestick candle);
 
         protected abstract void RegisterCandlestickUpdates();
 
@@ -72,51 +84,75 @@ namespace ImMillionaire.Brain.Core
 
         public virtual void BuyLimit()
         {
-            if (PlacedOrder == null)
+            if (PlacedOrder != null) return;
+
+            decimal freeBalance = BinanceClient.GetFreeQuoteBalance();
+            if (freeBalance <= 1 || OrderBook == null) return;
+
+            if (!Bot.UseAllAmount)
             {
-                decimal freeBalance = BinanceClient.GetFreeQuoteBalance();
-                if (freeBalance > 1 && OrderBook != null)
+                if(Bot.Amount <= 0) Bot.Amount = Bot.InitAmount + Bot.WonAmount;
+                
+                if (freeBalance >= Bot.Amount) freeBalance = Bot.Amount;
+            }
+
+            decimal price = OrderBook.LastBidPrice;
+
+            if (MarketPrice > 0)
+            {
+                // margin of safe to buy in the best price 0.02%
+                decimal marginOfSafe = Bot.BuyMarginOfSafe;
+                while (price >= MarketPrice)
                 {
-                    var locallastBid = OrderBook.LastBidPrice;
-
+                    decimal bidAskSpread = decimal.Round((OrderBook.LastAskPrice - OrderBook.LastBidPrice) / OrderBook.LastAskPrice * 100, 3);
+                    decimal dynamicMarginOfSafe = decimal.Round(price * 100 / MarketPrice - 100, 3);
+                    Logger.Warning("place buy Market: {0} Bid: {1}", MarketPrice, price);
+                    if (dynamicMarginOfSafe > marginOfSafe) marginOfSafe = dynamicMarginOfSafe;
+                    Logger.Warning(" margin of safe buy dynamicMarginOfSafe: {0} marginOfSafe: {1} bidAskSpread: {2}", dynamicMarginOfSafe, marginOfSafe, bidAskSpread);
                     // margin of safe to buy in the best price 0.02%
-                    decimal price = decimal.Round(locallastBid - locallastBid * (0.02m / 100), 2);
-                    decimal amount = Utils.TruncateDecimal(freeBalance / price, BinanceClient.DecimalAmount);
-
-                    if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, amount, price, TimeInForce.GoodTillCancel, out Order order))
-                    {
-                        PlacedOrder = order;
-                        CheckBuyWasExecuted();
-                        Log.Warning("place buy at: {0}", price);
-                    }
+                    price = decimal.Round(MarketPrice - MarketPrice * (marginOfSafe / 100), 2);
+                    marginOfSafe += 0.004m;
                 }
+            }
+
+            Logger.Warning("buy Market: {0} new price: {1}", MarketPrice, price);
+
+            decimal amount = Utils.TruncateDecimal(freeBalance / price, BinanceClient.DecimalAmount);
+            if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, amount, price, TimeInForce.GoodTillCancel, out Order order))
+            {
+                PlacedOrder = order;
+                Logger.Warning("place buy at: {0}", price);
+            }
+        }
+
+        public virtual void SellLimit()
+        {
+            decimal percentage = Bot.SellMarginOfSafe;
+            decimal fee = 0.075m; //BNB fee
+
+            Logger.Warning("decimalsStep: {0}", BinanceClient.DecimalAmount);
+            decimal quantity = PlacedOrder.Quantity;
+            if (PlacedOrder.Commission > 0)
+            {
+                quantity = Utils.TruncateDecimal(PlacedOrder.Quantity - (PlacedOrder.Quantity * (fee / 100)), BinanceClient.DecimalAmount);//BNB fee
+                Logger.Warning("buy Commission sell at: {0} {@PlacedOrder}", PlacedOrder.Quantity * (fee / 100), PlacedOrder);
+                percentage += fee;//recovery the fee
+            }
+
+            decimal newPrice = decimal.Round(PlacedOrder.Price + PlacedOrder.Price * (percentage / 100), 2);
+            if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, quantity, newPrice, TimeInForce.GoodTillCancel, out Order order))
+            {
+                PlacedOrder = order;
+                Logger.Warning("place sell at: {0}", newPrice);
             }
         }
 
         public virtual async void BuyLimitAsync()
         {
-
-        }
-
-        public virtual void SellLimit()
-        {
-            //var newPrice = decimal.Round(price + price * (0.15m / 100), 2);
-            //try
-            //{
-            //    if(BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, amount, newPrice, TimeInForce.GoodTillCancel, out Order order))
-            //    {
-            //        Utils.Log($"place sell at: {newPrice}", ConsoleColor.Green);
-            //    }                        
-            //}
-            //catch (Exception ex)
-            //{
-            //    Utils.Log($"error place sell at: {newPrice} {ex.Message}", ConsoleColor.Red);
-            //}
         }
 
         public virtual async void SellLimitAsync()
         {
-
         }
 
         protected void CheckBuyWasExecuted(int waitSecondsBeforeCancel = 60)

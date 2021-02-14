@@ -6,28 +6,20 @@ namespace ImMillionaire.Brain.Logger
 {
     public class TextWriterLogger : TextWriter
     {
-        private ILogger logger;
+        private ILogger Logger;
         private StringBuilder builder = new StringBuilder();
         private bool terminatorStarted = false;
 
-        public TextWriterLogger()
+        public TextWriterLogger(ILogger logger)
         {
-            logger = Log.Logger;
-        }
-
-        public static TextWriter Out
-        {
-            get
-            {
-                return new TextWriterLogger();
-            }
+            Logger = logger;
         }
 
         public override void Write(string value)
         {
             if (string.IsNullOrWhiteSpace(value)) return;
 
-            logger.Debug(value);
+            Logger.Debug(value);
         }
 
         public override void Write(char value)
@@ -46,7 +38,7 @@ namespace ImMillionaire.Brain.Logger
         private void Flush2Log()
         {
             if (builder.Length > NewLine.Length)
-                logger.Debug(builder.ToString());
+                Logger.Debug(builder.ToString());
             builder.Clear();
             terminatorStarted = false;
         }

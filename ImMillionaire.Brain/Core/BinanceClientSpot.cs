@@ -6,7 +6,6 @@ using Binance.Net.Objects.Spot.SpotData;
 using Binance.Net.Objects.Spot.UserStream;
 using CryptoExchange.Net.Objects;
 using CryptoExchange.Net.Sockets;
-using Microsoft.Extensions.Options;
 using Serilog;
 using System;
 using System.Linq;
@@ -18,16 +17,25 @@ namespace ImMillionaire.Brain.Core
     {
         public IBinanceSocketClientSpot BinanceSocketClientSpot { get; }
 
-        public BinanceClientSpot(IOptions<ConfigOptions> config) : base(config)
+        public BinanceClientSpot(IBinanceSocketClient socketClient, Binance.Net.Interfaces.IBinanceClient client, ILogger logger) : base(socketClient, client, logger)
         {
             Market = Client.Spot.Market;
             UserStream = Client.Spot.UserStream;
             BinanceSocketClientBase = BinanceSocketClientSpot = SocketClient.Spot;
+        }
 
-            BinanceSymbol symbol = Client.Spot.System.GetExchangeInfo().Data.Symbols.FirstOrDefault(x => x.Name == Configuration.Symbol);
-            if (symbol == null) throw new Exception("Symbol dont exist!");
-            BinanceSymbol = new AccountBinanceSymbol(symbol);
-            CalculateDecimalAmount(symbol.LotSizeFilter.StepSize);
+        public void StartSocketConnections(string symbol, Action<EventOrderBook> eventOrderBook, Action<Order> orderUpdate)
+        {
+            BinanceSymbol binanceSymbol = Client.Spot.System.GetExchangeInfo().Data.Symbols.FirstOrDefault(x => x.Name == symbol);
+            if (binanceSymbol == null) throw new Exception("Symbol dont exist!");
+            BinanceSymbol = new AccountBinanceSymbol(binanceSymbol);
+            CalculateDecimalAmount(BinanceSymbol.LotSizeFilter.StepSize);
+            Logger.Information("BinanceSymbol: {0}", BinanceSymbol.Name);
+
+            SubscribeToOrderBookUpdates(eventOrderBook);
+            GetListenKey();
+            SubscribeToUserDataUpdates(orderUpdate);
+            KeepAliveListenKey();
         }
 
         public bool TryPlaceOrder(OrderSide side, OrderType type, decimal quantity, decimal price, TimeInForce timeInForce, out Order order)
@@ -36,7 +44,7 @@ namespace ImMillionaire.Brain.Core
             WebCallResult<BinancePlacedOrder> orderRequest = Client.Spot.Order.PlaceOrder(BinanceSymbol.Name, side, type, quantity, null, null, price, timeInForce);
             if (!orderRequest.Success)
             {
-                Log.Fatal("{0}", orderRequest.Error?.Message);
+                Logger.Fatal("{0}", orderRequest.Error?.Message);
                 return false;
             }
 
@@ -50,7 +58,7 @@ namespace ImMillionaire.Brain.Core
             WebCallResult<BinanceOrder> orderRequest = Client.Spot.Order.GetOrder(BinanceSymbol.Name, orderId);
             if (!orderRequest.Success)
             {
-                Log.Fatal("{0}", orderRequest.Error?.Message);
+                Logger.Fatal("{0}", orderRequest.Error?.Message);
                 return false;
             }
 
@@ -73,27 +81,19 @@ namespace ImMillionaire.Brain.Core
             WebCallResult<BinancePlacedOrder> orderRequest = await Client.Spot.Order.PlaceOrderAsync(BinanceSymbol.Name, side, type, quantity, null, null, price, timeInForce);
             if (!orderRequest.Success)
             {
-                Log.Information("error place {0} at: {1}", side, price);
-                Log.Fatal("{0}", orderRequest.Error?.Message);
+                Logger.Information("error place {0} at: {1}", side, price);
+                Logger.Fatal("{0}", orderRequest.Error?.Message);
                 return (false, null);
             }
 
             return (true, new Order(orderRequest.Data));
         }
 
-        public void StartSocketConnections(Action<EventOrderBook> eventOrderBook, Action<Order> orderUpdate)
-        {
-            SubscribeToOrderBookUpdates(eventOrderBook);
-            GetListenKey();
-            SubscribeToUserDataUpdates(orderUpdate);
-            KeepAliveListenKey();
-        }
-
         private void SubscribeToUserDataUpdates(Action<Order> orderUpdate)
         {
             if (string.IsNullOrWhiteSpace(listenKey))
             {
-                Log.Fatal("ListenKey can't be null, maybe you have Api key Restrict access to trusted IPs only enabled");
+                Logger.Fatal("ListenKey can't be null, maybe you have Api key Restrict access to trusted IPs only enabled");
                 GetListenKey();
             }
 
@@ -104,7 +104,8 @@ namespace ImMillionaire.Brain.Core
             null, // Handler for position updates
             null); // Handler for account balance updates (withdrawals/deposits)
 
-            UpdateSubscriptionAutoConnetionIfConnLost(successAccount, () => SubscribeToUserDataUpdates(orderUpdate));
+            if (!successAccount.Success)
+                Logger.Fatal("SubscribeToUserDataUpdates {0}", successAccount.Error?.Message);
         }
 
         private void SubscribeToOrderBookUpdates(Action<EventOrderBook> eventOrderBook)
@@ -117,7 +118,8 @@ namespace ImMillionaire.Brain.Core
                 }
             });
 
-            UpdateSubscriptionAutoConnetionIfConnLost(successDepth, () => SubscribeToOrderBookUpdates(eventOrderBook));
+            if (!successDepth.Success)
+                Logger.Fatal("SubscribeToOrderBookUpdates {0}", successDepth.Error?.Message);
         }
 
         public decimal GetFreeBaseBalance()
@@ -140,7 +142,7 @@ namespace ImMillionaire.Brain.Core
             }
             else
             {
-                Log.Fatal("{0}", binanceMarginAccount.Error?.Message);
+                Logger.Fatal("{0}", binanceMarginAccount.Error?.Message);
             }
 
             return 0;

@@ -1,0 +1,28 @@
+﻿[
+  {
+    "Id": 1,
+    "Symbol": "ETHBUSD",
+    "Base": "ETH",
+    "Quote": "BUSD",
+    "Type": "Margin",
+    "UseAllAmount": true,
+    "InitAmount": 0.0,
+    "WonAmount": 0.0,
+    "Amount": 0.0,
+    "SellMarginOfSafe": 0.50,
+    "BuyMarginOfSafe": 0.025
+  },
+  {
+    "Id": 2,
+    "Symbol": "ETHBUSD",
+    "Base": "ETH",
+    "Quote": "BUSD",
+    "Type": "Margin",
+    "UseAllAmount": false,
+    "InitAmount": 1000.0,
+    "WonAmount": 0.0,
+    "Amount": 1000.0,
+    "SellMarginOfSafe": 0.50,
+    "BuyMarginOfSafe": 0.025
+  }
+]

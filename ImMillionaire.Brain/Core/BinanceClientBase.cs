@@ -1,18 +1,12 @@
-﻿using Binance.Net;
-using Binance.Net.Enums;
+﻿using Binance.Net.Enums;
 using Binance.Net.Interfaces;
 using Binance.Net.Interfaces.SocketSubClient;
 using Binance.Net.Interfaces.SubClients;
-using Binance.Net.Objects.Spot;
-using CryptoExchange.Net.Authentication;
 using CryptoExchange.Net.Objects;
 using CryptoExchange.Net.Sockets;
-using ImMillionaire.Brain.Logger;
-using Microsoft.Extensions.Options;
 using Serilog;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Trady.Core.Infrastructure;
@@ -21,11 +15,11 @@ namespace ImMillionaire.Brain.Core
 {
     public abstract class BinanceClientBase : IDisposable
     {
+        protected ILogger Logger { get; }
+
         protected IBinanceSocketClient SocketClient { get; }
 
         protected Binance.Net.Interfaces.IBinanceClient Client { get; }
-
-        protected ConfigOptions Configuration { get; }
 
         public IBinanceClientMarket Market { get; protected set; }
 
@@ -41,29 +35,11 @@ namespace ImMillionaire.Brain.Core
 
         public decimal GetCurrentTradePrice { get; set; }
 
-        public BinanceClientBase(IOptions<ConfigOptions> config)
+        public BinanceClientBase(IBinanceSocketClient socketClient, Binance.Net.Interfaces.IBinanceClient client, ILogger logger)
         {
-            /* Binance Configuration */
-            Configuration = config.Value;
-
-            SocketClient = new BinanceSocketClient(new BinanceSocketClientOptions()
-            {
-                ApiCredentials = new ApiCredentials(Configuration.ApiKey, Configuration.SecretKey),
-                SocketNoDataTimeout = TimeSpan.FromMinutes(5),
-                ReconnectInterval = TimeSpan.FromSeconds(1),
-                // LogVerbosity = CryptoExchange.Net.Logging.LogVerbosity.Debug,
-                LogWriters = new List<TextWriter> { TextWriterLogger.Out }
-
-            });
-
-            Client = new BinanceClient(new BinanceClientOptions()
-            {
-                ApiCredentials = new ApiCredentials(Configuration.ApiKey, Configuration.SecretKey),
-                LogWriters = new List<TextWriter> { TextWriterLogger.Out }
-                //LogVerbosity = CryptoExchange.Net.Logging.LogVerbosity.Debug,
-                //AutoTimestamp = true,
-                //AutoTimestampRecalculationInterval = TimeSpan.FromMinutes(30),
-            });
+            SocketClient = socketClient;
+            Client = client;
+            Logger = logger;
         }
 
         public IList<IOhlcv> GetKlines(KlineInterval klineInterval)
@@ -75,7 +51,7 @@ namespace ImMillionaire.Brain.Core
             }
             else
             {
-                Log.Fatal("{0}", klines.Error?.Message);
+                Logger.Fatal("{0}", klines.Error?.Message);
             }
 
             return null;
@@ -96,7 +72,8 @@ namespace ImMillionaire.Brain.Core
                 }
             });
 
-            UpdateSubscriptionAutoConnetionIfConnLost(successKline, () => SubscribeToKlineUpdates(candlestick, interval, calculateIndicators));
+            if (!successKline.Success)
+                Logger.Fatal("SubscribeToKlineUpdates {0}", successKline.Error?.Message);
         }
 
         public long Ping()
@@ -120,28 +97,6 @@ namespace ImMillionaire.Brain.Core
             }
         }
 
-        protected void UpdateSubscriptionAutoConnetionIfConnLost(CallResult<UpdateSubscription> updateSubscription, Action callback)
-        {
-            if (updateSubscription.Success)
-            {
-                updateSubscription.Data.ConnectionLost += () =>
-                {
-                    // SocketClient.Unsubscribe(updateSubscription.Data);
-                    // callback();
-                    Log.Fatal("ConnectionLost {0}", updateSubscription.Error?.Message);
-                };
-
-                updateSubscription.Data.Exception += (ex) =>
-                {
-                    Log.Fatal(ex, "ConnectionLost error unexpectedly.");
-                };
-            }
-            else
-            {
-                Log.Fatal("UpdateSubscriptionAutoConnetionIfConnLost {0}", updateSubscription.Error?.Message);
-            }
-        }
-
         protected void GetListenKey()
         {
             WebCallResult<string> result = UserStream.StartUserStream();
@@ -151,7 +106,7 @@ namespace ImMillionaire.Brain.Core
             }
             else
             {
-                Log.Fatal("{0} - GetListenKey", result.Error?.Message);
+                Logger.Fatal("{0} - GetListenKey", result.Error?.Message);
             }
         }
 
@@ -161,15 +116,10 @@ namespace ImMillionaire.Brain.Core
             {
                 await Task.Delay(new TimeSpan(0, 50, 0));
 
-                Log.Information("Check - KeepAliveListenKey");
                 if (!UserStream.KeepAliveUserStream(listenKey).Success)
                 {
-                    Log.Information("KeepAliveListenKey Fail execute GetListenKey");
+                    Logger.Information("KeepAliveListenKey Fail execute GetListenKey");
                     GetListenKey();
-                }
-                else
-                {
-                    Log.Information("KeepAliveListenKey Success");
                 }
             }
         }

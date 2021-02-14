@@ -1,5 +1,10 @@
-﻿using Serilog;
+﻿using ImMillionaire.Brain.Models;
+using Serilog;
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
 
 namespace ImMillionaire.Brain.BotTrade
 {
@@ -7,6 +12,7 @@ namespace ImMillionaire.Brain.BotTrade
     {
         private ILogger Logger { get; }
         private IBotTrade BotTrade { get; }
+        private IList<IBotTrade> Bots { get; }
 
         public BotTradeManager(ILogger logger, IBotTrade botTrade)
         {
@@ -18,7 +24,8 @@ namespace ImMillionaire.Brain.BotTrade
         {
             try
             {
-                BotTrade.Start();
+                IList<Bot> bots = JsonSerializer.Deserialize<IList<Bot>>(File.ReadAllText("bots.json"));
+                BotTrade.Start(bots.First());
                 Console.ReadLine();
             }
             catch (Exception ex)

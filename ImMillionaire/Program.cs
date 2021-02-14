@@ -18,7 +18,7 @@ namespace ImMillionaire
             Host.CreateDefaultBuilder(args).ConfigureAppConfiguration((hostingContext, config) =>
              {
                  config.AddJsonFile("appsettings.json")
-                 .AddJsonFile($"appsettings.{hostingContext.HostingEnvironment.EnvironmentName}.json")
+                 .AddJsonFile($"appsettings.{hostingContext.HostingEnvironment.EnvironmentName ?? "Production"}.json")
 #if DEBUG
                  .AddJsonFile("appsettings.Local.Development.json", optional: true, reloadOnChange: true)
 #endif

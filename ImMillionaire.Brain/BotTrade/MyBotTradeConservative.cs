@@ -1,6 +1,5 @@
 ﻿using Binance.Net.Enums;
 using ImMillionaire.Brain.Core;
-using Microsoft.Extensions.Options;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -10,28 +9,23 @@ namespace ImMillionaire.Brain
 {
     public class MyBotTradeConservative : BaseBot
     {
-        decimal marketPrice;
-
         MyCandle MyCandle = new MyCandle();
 
-        public MyBotTradeConservative(IBinanceClientFactory factory) : base(factory, Core.Enums.WalletType.Margin)
+        public MyBotTradeConservative(IBinanceClientFactory factory, ILogger logger) : base(factory, logger)
         {
         }
 
         protected override void RegisterCandlestickUpdates()
         {
-            SubscribeCandlesticks(KlineInterval.OneMinute, KlineUpdates);
             SubscribeCandlesticks(KlineInterval.ThreeMinutes, (candlestick, candle) => MyCandle.SetThreeMinutes(candlestick));
             SubscribeCandlesticks(KlineInterval.OneHour, (candlestick, candle) => MyCandle.SetOneHour(candlestick));
         }
 
-        protected /*override*/ void KlineUpdates(IList<IOhlcv> candlestick, Candlestick candle)
+        protected override void KlineUpdates(IList<IOhlcv> candlesticks, Candlestick candle)
         {
-            marketPrice = candle.Close;
-          
             if (MyCandle.OneHourRsi14 > 70m)
             {
-                if(PlacedOrder != null) SellLimit();
+                if (PlacedOrder != null) SellLimit();
             }
             else if (MyCandle.OneHourRsi14 < 30m)
             {
@@ -41,67 +35,47 @@ namespace ImMillionaire.Brain
 
         protected override void OrderUpdate(Order order)
         {
+            Logger.Information("Order {@Order}", order);
             // Handle order update info data
             if (order.Side == OrderSide.Buy)
             {
-                if (order.Status == OrderStatus.New)
+                switch (order.Status)
                 {
-                    PlacedOrder = order;
-                    CheckBuyWasExecuted(60);
-                }
-                else if (order.Status == OrderStatus.Filled)
-                {
-                    PlacedOrder = order;                 
-                }
-                else if (order.Status == OrderStatus.Canceled)
-                {
-                    Log.Information("cancel buy");
-                    PlacedOrder = null;
+                    case OrderStatus.New:
+                        PlacedOrder = order;
+                        CheckBuyWasExecuted(60);
+                        Logger.Information("CheckBuyWasExecuted");
+                        break;
+                    case OrderStatus.PartiallyFilled:
+                        tokenSource.Cancel();
+                        Logger.Information("Cancel CheckBuyWasExecuted");
+                        break;
+                    case OrderStatus.Filled:
+                        PlacedOrder = order;
+                        SellLimit();
+                        break;
+                    case OrderStatus.Canceled:
+                    case OrderStatus.PendingCancel:
+                    case OrderStatus.Rejected:
+                    case OrderStatus.Expired:
+                        Logger.Information("Cancel buy");
+                        PlacedOrder = null;
+                        break;
+                    default:
+                        break;
                 }
             }
             else //OrderSide.Sell
             {
-                if (order.Status == OrderStatus.Filled)
+                if (order.Status == OrderStatus.New)
                 {
-                    Log.Information("sell");
-                    PlacedOrder = null;
+                    Logger.Information("New");
+                    PlacedOrder = order;
                 }
-            }
-        }
-        public override void BuyLimit()
-        {
-            if (PlacedOrder == null)
-            {
-                decimal freeBalance = BinanceClient.GetFreeQuoteBalance();
-                if (freeBalance > 1 && OrderBook != null)
+                else if (order.Status == OrderStatus.Filled)
                 {
-                    decimal price = OrderBook.LastBidPrice;
-
-                    if (marketPrice > 0)
-                    {
-                        if (price == marketPrice)
-                        {
-                            Log.Warning("place buy Market: {0} Bid: {1}", marketPrice, price);
-                            price = decimal.Round(marketPrice - marketPrice * (0.016m / 100), 2);
-                        }
-                        
-                        if (price > marketPrice)
-                        {
-                            Log.Warning("place buy Market: {0} Bid: {1}", marketPrice, price);
-
-                            // margin of safe to buy in the best price 0.03%
-                            price = decimal.Round(marketPrice - marketPrice * (0.022m / 100), 2);
-                        }
-                    }
-
-                    Log.Warning("buy Market: {0} new price: {1}", marketPrice, price);
-                    Log.Warning("decimalsStep: {0}", BinanceClient.DecimalAmount);
-                    decimal amount = Utils.TruncateDecimal(freeBalance / price, BinanceClient.DecimalAmount);
-
-                    if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, amount, price, TimeInForce.GoodTillCancel, out Order order))
-                    {
-                        Log.Warning("place buy at: {0}", price);
-                    }
+                    Logger.Information("Sell");
+                    PlacedOrder = null;
                 }
             }
         }
@@ -115,7 +89,7 @@ namespace ImMillionaire.Brain
             if (PlacedOrder.Commission > 0)
             {
                 amount = Utils.TruncateDecimal(PlacedOrder.Quantity - (PlacedOrder.Quantity * (fee / 100)), BinanceClient.DecimalAmount);//BNB fee
-                Log.Warning("buy Commission sell at: {0}", PlacedOrder.Quantity * 0.00075m);
+                Logger.Warning("buy Commission sell at: {0}", PlacedOrder.Quantity * 0.00075m);
                 percentage += fee;//recovery the fee
             }
 
@@ -124,12 +98,13 @@ namespace ImMillionaire.Brain
             {
                 if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, amount, newPrice, TimeInForce.GoodTillCancel, out Order order))
                 {
-                    Log.Warning("place sell at: {0}", newPrice);
+                    PlacedOrder = order;
+                    Logger.Warning("place sell at: {0}", newPrice);
                 }
             }
             catch (Exception ex)
             {
-                Log.Fatal("error sell price: {0} amount: {1} {2}", newPrice, amount, ex.Message);
+                Logger.Fatal("error sell price: {0} amount: {1} {2}", newPrice, amount, ex.Message);
             }
         }
 

@@ -44,6 +44,6 @@ namespace ImMillionaire.Brain.Core
 
         void SubscribeToKlineUpdates(IList<IOhlcv> candlestick, KlineInterval interval, Action<IList<IOhlcv>, Candlestick> calculateIndicators);
 
-        void StartSocketConnections(Action<EventOrderBook> eventOrderBook, Action<Order> orderUpdate);
+        void StartSocketConnections(string symbol, Action<EventOrderBook> eventOrderBook, Action<Order> orderUpdate);
     }
 }

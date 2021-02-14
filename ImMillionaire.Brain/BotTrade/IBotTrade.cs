@@ -1,7 +1,9 @@
-﻿namespace ImMillionaire.Brain
+﻿using ImMillionaire.Brain.Models;
+
+namespace ImMillionaire.Brain
 {
     public interface IBotTrade
     {
-        void Start();
+        void Start(Bot bot);
     }
 }

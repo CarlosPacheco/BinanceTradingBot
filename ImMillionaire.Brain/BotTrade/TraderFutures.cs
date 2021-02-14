@@ -11,16 +11,14 @@ namespace ImMillionaire.Brain
 {
     public class TraderFutures : BaseBot
     {
-        decimal marketPrice;
         MyCandle MyCandle = new MyCandle();
 
-        public TraderFutures(IBinanceClientFactory factory) : base(factory, Core.Enums.WalletType.Futures)
+        public TraderFutures(IBinanceClientFactory factory, ILogger logger) : base(factory, logger)
         {
         }
 
         protected override void RegisterCandlestickUpdates()
         {
-            SubscribeCandlesticks(KlineInterval.OneMinute, KlineUpdates);
             SubscribeCandlesticks(KlineInterval.OneHour, (candlestick, candle) => MyCandle.SetOneHour(candlestick));
         }
 
@@ -30,17 +28,17 @@ namespace ImMillionaire.Brain
             if (order.Side == OrderSide.Buy && order.Status == OrderStatus.Filled)
             {
                 PlacedOrder = order;
-                Log.Information("buy future");
+                Logger.Information("buy future");
                 SellLimit();
             }
             else if (order.Side == OrderSide.Sell && order.Status == OrderStatus.Filled)
             {
-                Log.Information("sell future");
+                Logger.Information("sell future");
                 PlacedOrder = null;
             }
             else if (order.Side == OrderSide.Buy && order.Status == OrderStatus.Canceled)
             {
-                Log.Information("cancel buy future");
+                Logger.Information("cancel buy future");
                 PlacedOrder = null;
             }
         }
@@ -51,9 +49,8 @@ namespace ImMillionaire.Brain
         DateTime lastDateUp = DateTime.UtcNow;
         DateTime lastDateDown = DateTime.UtcNow;
 
-        protected void KlineUpdates(IList<IOhlcv> candlestick, Candlestick candle)
+        protected override void KlineUpdates(IList<IOhlcv> candlestick, Candlestick candle)
         {
-            marketPrice = candle.Close;
             decimal rsi14 = candlestick.Rsi(14).Last().Tick.Value;
             decimal ema10 = candlestick.Ema(10).Last().Tick.Value;
             decimal ema120 = candlestick.Ema(120).Last().Tick.Value;
@@ -77,13 +74,13 @@ namespace ImMillionaire.Brain
                 {
                     if (MyCandle.OneHourRsi14 > 70m)
                     {
-                        Log.Information("up trend sell future");
+                        Logger.Information("up trend sell future");
                     }
 
                     if (xptoUp.HasValue && xptoUp == true)
                     {
                         BuyLimit();
-                        Log.Information("up trend buy future");
+                        Logger.Information("up trend buy future");
                         xptoUp = false;
                         xptoDown = true;
                     }
@@ -101,7 +98,7 @@ namespace ImMillionaire.Brain
                     if (xptoDown.HasValue && xptoDown == true)
                     {
                         //  SellNow();
-                        Log.Information("Bot end init");                       
+                        Logger.Information("Bot end init");
                         xptoDown = false;
                         xptoUp = true;
                     }
@@ -112,11 +109,11 @@ namespace ImMillionaire.Brain
                 }
             }
 
-            if (marketPrice <= bb20.LowerBand)
+            if (MarketPrice <= bb20.LowerBand)
             {
                 // Utils.WarnLog("LowerBand");
             }
-            else if (marketPrice >= bb20.UpperBand)
+            else if (MarketPrice >= bb20.UpperBand)
             {
                 //  Utils.WarnLog("UpperBand");
             }
@@ -137,11 +134,11 @@ namespace ImMillionaire.Brain
                     {
                         PlacedOrder = order;
                         CheckBuyWasExecuted();
-                        Log.Warning("future place buy at: {0} {1}", price, OrderBook.LastAskPrice);
+                        Logger.Warning("future place buy at: {0} {1}", price, OrderBook.LastAskPrice);
                     }
                     else
                     {
-                        Log.Warning("future error place buy at: {0} {1}", price, amount);
+                        Logger.Warning("future error place buy at: {0} {1}", price, amount);
                     }
                 }
 
@@ -158,14 +155,15 @@ namespace ImMillionaire.Brain
             {
                 if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, amount, newPrice, TimeInForce.GoodTillCancel, out Order order))
                 {
-                    Log.Warning("place sell at: {0}", newPrice);
+                    Logger.Warning("place sell at: {0}", newPrice);
                 }
             }
             catch (Exception ex)
             {
-                Log.Fatal("error sell price: {0} amount: {1} {2}", newPrice, amount, ex.Message);
+                Logger.Fatal("error sell price: {0} amount: {1} {2}", newPrice, amount, ex.Message);
             }
         }
+
     }
 
 }
