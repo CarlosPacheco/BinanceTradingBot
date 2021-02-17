@@ -95,6 +95,7 @@ namespace ImMillionaire.Brain.Core
                 GetListenKey();
             }
             CallResult<UpdateSubscription> successAccount = SocketClient.FuturesUsdt.SubscribeToUserDataUpdates(listenKey,
+            null, // onLeverageUpdate
             null, // onMarginUpdate
             null, // onAccountUpdate      
             (BinanceFuturesStreamOrderUpdate data) => orderUpdate(new Order(data.UpdateData)), // onOrderUpdate

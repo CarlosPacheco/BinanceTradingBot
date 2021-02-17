@@ -3,6 +3,9 @@ using Microsoft.Extensions.DependencyInjection;
 using ImMillionaire.Brain.BotTrade;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
+using System.Threading.Tasks;
+using System.Threading;
+using Serilog;
 
 namespace ImMillionaire
 {
@@ -10,8 +13,7 @@ namespace ImMillionaire
     {
         static void Main(string[] args)
         {
-            CreateHostBuilder(args).Build()
-                .Services.GetService<IBotTradeManager>().Run();
+            CreateHostBuilder(args).Build().Run();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
@@ -24,7 +26,63 @@ namespace ImMillionaire
 #endif
                  .AddEnvironmentVariables();
              })
-            .ConfigureServices((hostingContext, services) => ContainerBuilder.DependencyInjection(services, hostingContext.Configuration));
+            .ConfigureServices((hostingContext, services) =>
+            {
+                ContainerBuilder.DependencyInjection(services, hostingContext.Configuration);
+                services.AddHostedService<LifetimeEventsHostedService>();
+            });
+    }
+
+    internal class LifetimeEventsHostedService : IHostedService
+    {
+        private readonly ILogger _logger;
+        private readonly IHostApplicationLifetime _appLifetime;
+
+        private readonly IBotTradeManager _botTradeManager;
+
+        public LifetimeEventsHostedService(
+            ILogger logger,
+            IBotTradeManager botTradeManager,
+            IHostApplicationLifetime appLifetime)
+        {
+            _logger = logger;
+            _botTradeManager = botTradeManager;
+            _appLifetime = appLifetime;
+        }
+
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            _appLifetime.ApplicationStarted.Register(OnStarted);
+            _appLifetime.ApplicationStopping.Register(OnStopping);
+            _appLifetime.ApplicationStopped.Register(OnStopped);
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        private void OnStarted()
+        {
+            _logger.Information("OnStarted has been called.");
+            _botTradeManager.Run();
+            // Perform post-startup activities here
+        }
+
+        private void OnStopping()
+        {
+            _logger.Information("OnStopping has been called.");
+
+            // Perform on-stopping activities here
+        }
+
+        private void OnStopped()
+        {
+            _logger.Information("OnStopped has been called.");
+
+            // Perform post-stopped activities here
+        }
     }
 }
 
