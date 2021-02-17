@@ -30,7 +30,7 @@ namespace ImMillionaire
             {
                 ContainerBuilder.DependencyInjection(services, hostingContext.Configuration);
                 services.AddHostedService<LifetimeEventsHostedService>();
-            });
+            }).UseSerilog();
     }
 
     internal class LifetimeEventsHostedService : IHostedService

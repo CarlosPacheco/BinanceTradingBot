@@ -19,7 +19,7 @@ namespace ImMillionaire.Brain.Core
         {
             services.AddSingleton(config => Configuration);
             // IoC Logger 
-            services.AddSingleton<ILogger>(new LoggerConfiguration().ReadFrom.Configuration(Configuration).CreateLogger());
+            services.AddSingleton<ILogger>(Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(Configuration).CreateLogger());
             services.AddSingleton<TextWriterLogger>();
             ConfigOptions config = Configuration.GetSection(ConfigOptions.Position).Get<ConfigOptions>();
 
