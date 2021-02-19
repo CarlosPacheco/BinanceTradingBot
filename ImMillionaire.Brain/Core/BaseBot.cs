@@ -91,8 +91,8 @@ namespace ImMillionaire.Brain.Core
 
             if (!Bot.UseAllAmount)
             {
-                if(Bot.Amount <= 0) Bot.Amount = Bot.InitAmount + Bot.WonAmount;
-                
+                if (Bot.Amount <= 0) Bot.Amount = Bot.InitAmount + Bot.WonAmount;
+
                 if (freeBalance >= Bot.Amount) freeBalance = Bot.Amount;
             }
 
@@ -110,15 +110,15 @@ namespace ImMillionaire.Brain.Core
                     if (dynamicMarginOfSafe > marginOfSafe) marginOfSafe = dynamicMarginOfSafe;
                     Logger.Warning(" margin of safe buy dynamicMarginOfSafe: {0} marginOfSafe: {1} bidAskSpread: {2}", dynamicMarginOfSafe, marginOfSafe, bidAskSpread);
                     // margin of safe to buy in the best price 0.02%
-                    price = decimal.Round(MarketPrice - MarketPrice * (marginOfSafe / 100), 2);
+                    price = decimal.Round(MarketPrice - MarketPrice * (marginOfSafe / 100), BinanceClient.DecimalPrice);
                     marginOfSafe += 0.004m;
                 }
             }
 
             Logger.Warning("buy Market: {0} new price: {1}", MarketPrice, price);
 
-            decimal amount = Utils.TruncateDecimal(freeBalance / price, BinanceClient.DecimalAmount);
-            if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, amount, price, TimeInForce.GoodTillCancel, out Order order))
+            decimal quantity = Utils.TruncateDecimal(freeBalance / price, BinanceClient.DecimalQuantity);
+            if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, quantity, price, TimeInForce.GoodTillCancel, out Order order))
             {
                 PlacedOrder = order;
                 Logger.Warning("place buy at: {0}", price);
@@ -130,16 +130,16 @@ namespace ImMillionaire.Brain.Core
             decimal percentage = Bot.SellMarginOfSafe;
             decimal fee = 0.075m; //BNB fee
 
-            Logger.Warning("decimalsStep: {0}", BinanceClient.DecimalAmount);
+            Logger.Warning("decimalsStep: {0}", BinanceClient.DecimalQuantity);
             decimal quantity = PlacedOrder.Quantity;
             if (PlacedOrder.Commission > 0)
             {
-                quantity = Utils.TruncateDecimal(PlacedOrder.Quantity - (PlacedOrder.Quantity * (fee / 100)), BinanceClient.DecimalAmount);//BNB fee
+                quantity = Utils.TruncateDecimal(PlacedOrder.Quantity - (PlacedOrder.Quantity * (fee / 100)), BinanceClient.DecimalQuantity);//BNB fee
                 Logger.Warning("buy Commission sell at: {0} {@PlacedOrder}", PlacedOrder.Quantity * (fee / 100), PlacedOrder);
                 percentage += fee;//recovery the fee
             }
 
-            decimal newPrice = decimal.Round(PlacedOrder.Price + PlacedOrder.Price * (percentage / 100), 2);
+            decimal newPrice = decimal.Round(PlacedOrder.Price + PlacedOrder.Price * (percentage / 100), BinanceClient.DecimalPrice);
             if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, quantity, newPrice, TimeInForce.GoodTillCancel, out Order order))
             {
                 PlacedOrder = order;

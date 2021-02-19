@@ -33,6 +33,8 @@ namespace ImMillionaire.Brain.Core
 
         public BinanceSymbolLotSizeFilter LotSizeFilter { get; set; }
 
+        public Binance.Net.Objects.Spot.MarketData.BinanceSymbolPriceFilter PriceFilter { get; set; }
+
         public AccountBinanceSymbol(BinanceSymbol binanceSymbol)
         {
             Name = binanceSymbol.Name;
@@ -41,6 +43,7 @@ namespace ImMillionaire.Brain.Core
             BaseAssetPrecision = binanceSymbol.BaseAssetPrecision;
             QuantityPrecision = binanceSymbol.QuoteAssetPrecision;
             LotSizeFilter = binanceSymbol.LotSizeFilter;
+            PriceFilter = binanceSymbol.PriceFilter;
         }
 
         public AccountBinanceSymbol(BinanceFuturesSymbol binanceSymbol)
@@ -54,7 +57,14 @@ namespace ImMillionaire.Brain.Core
             {
                 MinQuantity = binanceSymbol.LotSizeFilter.MinQuantity,
                 MaxQuantity = binanceSymbol.LotSizeFilter.MaxQuantity,
-                StepSize = binanceSymbol.LotSizeFilter.StepSize,
+                StepSize = binanceSymbol.LotSizeFilter.StepSize
+            };
+            PriceFilter = new Binance.Net.Objects.Spot.MarketData.BinanceSymbolPriceFilter()
+            {
+                FilterType = binanceSymbol.PriceFilter.FilterType,
+                MinPrice = binanceSymbol.PriceFilter.MinPrice,
+                MaxPrice = binanceSymbol.PriceFilter.MaxPrice,
+                TickSize = binanceSymbol.PriceFilter.TickSize
             };
         }
     }

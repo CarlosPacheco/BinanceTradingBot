@@ -31,7 +31,9 @@ namespace ImMillionaire.Brain.Core
 
         protected string listenKey;
 
-        public int DecimalAmount { get; set; }
+        public int DecimalQuantity { get; set; }
+
+        public int DecimalPrice { get; set; }
 
         public decimal GetCurrentTradePrice { get; set; }
 
@@ -86,15 +88,26 @@ namespace ImMillionaire.Brain.Core
             return BinanceSymbol;
         }
 
-        protected void CalculateDecimalAmount(decimal stepSize)
+        private int CalculateDecimal(decimal size)
         {
-            if (stepSize != 0.0m)
+            if (size != 0.0m)
             {
-                for (DecimalAmount = 0; stepSize < 1; DecimalAmount++)
+                int value;
+                for (value = 0; size < 1; value++)
                 {
-                    stepSize *= 10;
+                    size *= 10;
                 }
+
+                return value;
             }
+
+            return 0;
+        }
+
+        protected void CalculateDecimal(AccountBinanceSymbol accountBinanceSymbol)
+        {
+            DecimalQuantity = CalculateDecimal(accountBinanceSymbol.LotSizeFilter.StepSize);
+            DecimalPrice = CalculateDecimal(accountBinanceSymbol.PriceFilter.TickSize);
         }
 
         protected void GetListenKey()

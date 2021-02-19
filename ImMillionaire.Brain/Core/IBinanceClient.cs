@@ -16,7 +16,9 @@ namespace ImMillionaire.Brain.Core
 
         AccountBinanceSymbol GetAccountBinanceSymbol();
 
-        int DecimalAmount { get; }
+        int DecimalQuantity { get; }
+
+        int DecimalPrice { get; }
 
         IBinanceClientMarket Market { get; }
 

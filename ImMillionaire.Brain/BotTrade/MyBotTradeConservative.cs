@@ -85,18 +85,18 @@ namespace ImMillionaire.Brain
             decimal percentage = 0.15m;
             decimal fee = 0.075m; //BNB fee
 
-            decimal amount = PlacedOrder.Quantity;
+            decimal quantity = PlacedOrder.Quantity;
             if (PlacedOrder.Commission > 0)
             {
-                amount = Utils.TruncateDecimal(PlacedOrder.Quantity - (PlacedOrder.Quantity * (fee / 100)), BinanceClient.DecimalAmount);//BNB fee
+                quantity = Utils.TruncateDecimal(PlacedOrder.Quantity - (PlacedOrder.Quantity * (fee / 100)), BinanceClient.DecimalQuantity);//BNB fee
                 Logger.Warning("buy Commission sell at: {0}", PlacedOrder.Quantity * 0.00075m);
                 percentage += fee;//recovery the fee
             }
 
-            decimal newPrice = decimal.Round(PlacedOrder.Price + PlacedOrder.Price * (percentage / 100), 2);
+            decimal newPrice = decimal.Round(PlacedOrder.Price + PlacedOrder.Price * (percentage / 100), BinanceClient.DecimalPrice);
             try
             {
-                if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, amount, newPrice, TimeInForce.GoodTillCancel, out Order order))
+                if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, quantity, newPrice, TimeInForce.GoodTillCancel, out Order order))
                 {
                     PlacedOrder = order;
                     Logger.Warning("place sell at: {0}", newPrice);
@@ -104,7 +104,7 @@ namespace ImMillionaire.Brain
             }
             catch (Exception ex)
             {
-                Logger.Fatal("error sell price: {0} amount: {1} {2}", newPrice, amount, ex.Message);
+                Logger.Fatal("error sell price: {0} amount: {1} {2}", newPrice, quantity, ex.Message);
             }
         }
 
