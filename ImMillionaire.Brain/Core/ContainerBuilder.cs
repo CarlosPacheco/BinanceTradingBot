@@ -38,20 +38,16 @@ namespace ImMillionaire.Brain.Core
                  ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey),
                  SocketNoDataTimeout = TimeSpan.FromMinutes(5),
                  ReconnectInterval = TimeSpan.FromSeconds(1),
-#if DEBUG
                  LogVerbosity = CryptoExchange.Net.Logging.LogVerbosity.Error,
                  LogWriters = new List<TextWriter> { serviceProvider.GetService<TextWriterLogger>() }
-#endif
              }));
 
             services.AddTransient<Binance.Net.Interfaces.IBinanceClient>(serviceProvider =>
             new BinanceClient(new BinanceClientOptions()
             {
                 ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey),
-#if DEBUG
                 LogWriters = new List<TextWriter> { serviceProvider.GetService<TextWriterLogger>() },
                 LogVerbosity = CryptoExchange.Net.Logging.LogVerbosity.Error,
-#endif
                 //AutoTimestamp = true,
                 //AutoTimestampRecalculationInterval = TimeSpan.FromMinutes(30),
             }));

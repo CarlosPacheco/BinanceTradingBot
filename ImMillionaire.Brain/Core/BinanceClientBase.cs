@@ -126,7 +126,6 @@ namespace ImMillionaire.Brain.Core
 
         public void Dispose()
         {
-            if (!string.IsNullOrWhiteSpace(listenKey)) UserStream.StopUserStream(listenKey);
             Client?.Dispose();
             SocketClient?.UnsubscribeAll();
             SocketClient?.Dispose();

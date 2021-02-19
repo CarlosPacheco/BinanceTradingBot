@@ -26,7 +26,6 @@ namespace ImMillionaire.Brain.BotTrade
             {
                 IList<Bot> bots = JsonSerializer.Deserialize<IList<Bot>>(File.ReadAllText("bots.json"));
                 BotTrade.Start(bots.First());
-                Console.ReadLine();
             }
             catch (Exception ex)
             {
