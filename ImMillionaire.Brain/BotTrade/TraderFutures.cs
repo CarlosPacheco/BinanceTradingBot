@@ -128,7 +128,7 @@ namespace ImMillionaire.Brain
                 {
                     decimal price = OrderBook.LastBidPrice;
 
-                    decimal amount = Utils.TruncateDecimal(freeBalance / price, 6);
+                    decimal amount = freeBalance / price;
 
                     if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, amount, price, TimeInForce.GoodTillCancel, out Order order))
                     {
@@ -149,7 +149,7 @@ namespace ImMillionaire.Brain
         {
             decimal percentage = 0.10m;
             decimal amount = PlacedOrder.Quantity;
-            decimal newPrice = decimal.Round(PlacedOrder.Price + PlacedOrder.Price * (percentage / 100), 2);
+            decimal newPrice = PlacedOrder.Price + PlacedOrder.Price * (percentage / 100);
 
             try
             {

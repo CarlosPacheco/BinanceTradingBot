@@ -27,7 +27,6 @@ namespace ImMillionaire.Brain.Core
             BinanceFuturesSymbol binanceSymbol = Client.FuturesUsdt.System.GetExchangeInfo().Data.Symbols.FirstOrDefault(x => x.Name == symbol);
             if (binanceSymbol == null) throw new Exception("Symbol don't exist!");
             BinanceSymbol = new AccountBinanceSymbol(binanceSymbol);
-            CalculateDecimal(BinanceSymbol);
             Logger.Information("BinanceSymbol: {0}", BinanceSymbol.Name);
 
             SubscribeToBookTickerUpdates(eventOrderBook);
@@ -48,6 +47,19 @@ namespace ImMillionaire.Brain.Core
 
             order = new Order(orderRequest.Data);
             return true;
+        }
+
+        public async Task<(bool IsSucess, Order Order)> TryPlaceOrderAsync(OrderSide side, OrderType type, decimal quantity, decimal price, TimeInForce timeInForce)
+        {
+            WebCallResult<BinanceFuturesPlacedOrder> orderRequest = await Client.FuturesUsdt.Order.PlaceOrderAsync(BinanceSymbol.Name, side, type, quantity, PositionSide.Both, timeInForce, null, price);
+            if (!orderRequest.Success)
+            {
+                Logger.Warning($"error place {side} at: {price}");
+                Logger.Fatal("{0}", orderRequest.Error?.Message);
+                return (false, null);
+            }
+
+            return (true, new Order(orderRequest.Data));
         }
 
         public bool TryGetOrder(long orderId, out Order order)
@@ -72,19 +84,6 @@ namespace ImMillionaire.Brain.Core
         public async Task<bool> CancelOrderAsync(long orderId)
         {
             return (await Client.FuturesUsdt.Order.CancelOrderAsync(BinanceSymbol.Name, orderId)).Success;
-        }
-
-        public async Task<(bool IsSucess, Order Order)> TryPlaceOrderAsync(OrderSide side, OrderType type, decimal quantity, decimal price, TimeInForce timeInForce)
-        {
-            WebCallResult<BinanceFuturesPlacedOrder> orderRequest = await Client.FuturesUsdt.Order.PlaceOrderAsync(BinanceSymbol.Name, side, type, quantity, PositionSide.Both, timeInForce, null, price);
-            if (!orderRequest.Success)
-            {
-                Logger.Warning($"error place {side} at: {price}");
-                Logger.Fatal("{0}", orderRequest.Error?.Message);
-                return (false, null);
-            }
-
-            return (true, new Order(orderRequest.Data));
         }
 
         private void SubscribeToUserDataUpdates(Action<Order> orderUpdate)

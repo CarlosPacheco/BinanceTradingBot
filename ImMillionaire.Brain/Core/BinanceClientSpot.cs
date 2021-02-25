@@ -1,4 +1,5 @@
-﻿using Binance.Net.Enums;
+﻿using Binance.Net;
+using Binance.Net.Enums;
 using Binance.Net.Interfaces;
 using Binance.Net.Interfaces.SocketSubClient;
 using Binance.Net.Objects.Spot.MarketData;
@@ -29,7 +30,6 @@ namespace ImMillionaire.Brain.Core
             BinanceSymbol binanceSymbol = Client.Spot.System.GetExchangeInfo().Data.Symbols.FirstOrDefault(x => x.Name == symbol);
             if (binanceSymbol == null) throw new Exception("Symbol dont exist!");
             BinanceSymbol = new AccountBinanceSymbol(binanceSymbol);
-            CalculateDecimal(BinanceSymbol);
             Logger.Information("BinanceSymbol: {0}", BinanceSymbol.Name);
 
             SubscribeToOrderBookUpdates(eventOrderBook);
@@ -50,6 +50,19 @@ namespace ImMillionaire.Brain.Core
 
             order = new Order(orderRequest.Data);
             return true;
+        }
+
+        public async Task<(bool IsSucess, Order Order)> TryPlaceOrderAsync(OrderSide side, OrderType type, decimal quantity, decimal price, TimeInForce timeInForce)
+        {
+            WebCallResult<BinancePlacedOrder> orderRequest = await Client.Spot.Order.PlaceOrderAsync(BinanceSymbol.Name, side, type, quantity, null, null, price, timeInForce);
+            if (!orderRequest.Success)
+            {
+                Logger.Information("error place {0} at: {1}", side, price);
+                Logger.Fatal("{0}", orderRequest.Error?.Message);
+                return (false, null);
+            }
+
+            return (true, new Order(orderRequest.Data));
         }
 
         public bool TryGetOrder(long orderId, out Order order)
@@ -74,19 +87,6 @@ namespace ImMillionaire.Brain.Core
         public async Task<bool> CancelOrderAsync(long orderId)
         {
             return (await Client.Spot.Order.CancelOrderAsync(BinanceSymbol.Name, orderId)).Success;
-        }
-
-        public async Task<(bool IsSucess, Order Order)> TryPlaceOrderAsync(OrderSide side, OrderType type, decimal quantity, decimal price, TimeInForce timeInForce)
-        {
-            WebCallResult<BinancePlacedOrder> orderRequest = await Client.Spot.Order.PlaceOrderAsync(BinanceSymbol.Name, side, type, quantity, null, null, price, timeInForce);
-            if (!orderRequest.Success)
-            {
-                Logger.Information("error place {0} at: {1}", side, price);
-                Logger.Fatal("{0}", orderRequest.Error?.Message);
-                return (false, null);
-            }
-
-            return (true, new Order(orderRequest.Data));
         }
 
         private void SubscribeToUserDataUpdates(Action<Order> orderUpdate)

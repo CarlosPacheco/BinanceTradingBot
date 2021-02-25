@@ -41,11 +41,6 @@ namespace ImMillionaire.Brain
             {
                 switch (order.Status)
                 {
-                    case OrderStatus.New:
-                        PlacedOrder = order;
-                        CheckBuyWasExecuted(60);
-                        Logger.Information("CheckBuyWasExecuted");
-                        break;
                     case OrderStatus.PartiallyFilled:
                         tokenSource.Cancel();
                         Logger.Information("Cancel CheckBuyWasExecuted");
@@ -67,12 +62,7 @@ namespace ImMillionaire.Brain
             }
             else //OrderSide.Sell
             {
-                if (order.Status == OrderStatus.New)
-                {
-                    Logger.Information("New");
-                    PlacedOrder = order;
-                }
-                else if (order.Status == OrderStatus.Filled)
+                if (order.Status == OrderStatus.Filled)
                 {
                     Logger.Information("Sell");
                     PlacedOrder = null;
@@ -88,18 +78,19 @@ namespace ImMillionaire.Brain
             decimal quantity = PlacedOrder.Quantity;
             if (PlacedOrder.Commission > 0)
             {
-                quantity = Utils.TruncateDecimal(PlacedOrder.Quantity - (PlacedOrder.Quantity * (fee / 100)), BinanceClient.DecimalQuantity);//BNB fee
+                quantity = PlacedOrder.Quantity - (PlacedOrder.Quantity * (fee / 100));//BNB fee
                 Logger.Warning("buy Commission sell at: {0}", PlacedOrder.Quantity * 0.00075m);
                 percentage += fee;//recovery the fee
             }
 
-            decimal newPrice = decimal.Round(PlacedOrder.Price + PlacedOrder.Price * (percentage / 100), BinanceClient.DecimalPrice);
+            decimal newPrice = PlacedOrder.Price + PlacedOrder.Price * (percentage / 100);
             try
             {
                 if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, quantity, newPrice, TimeInForce.GoodTillCancel, out Order order))
                 {
                     PlacedOrder = order;
-                    Logger.Warning("place sell at: {0}", newPrice);
+                    CheckBuyWasExecuted(60);
+                    Logger.Warning("CheckBuyWasExecuted place sell at: {0}", newPrice);
                 }
             }
             catch (Exception ex)
@@ -107,6 +98,5 @@ namespace ImMillionaire.Brain
                 Logger.Fatal("error sell price: {0} amount: {1} {2}", newPrice, quantity, ex.Message);
             }
         }
-
     }
 }

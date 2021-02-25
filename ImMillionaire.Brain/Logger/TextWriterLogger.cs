@@ -26,19 +26,29 @@ namespace ImMillionaire.Brain.Logger
         {
             builder.Append(value);
             if (value == NewLine[0])
+            {
                 if (NewLine.Length == 1)
+                {
                     Flush2Log();
+                }
                 else
+                {
                     terminatorStarted = true;
-            else if (terminatorStarted)
-                if (terminatorStarted = NewLine[1] == value)
-                    Flush2Log();
+                }
+            }
+            else if (terminatorStarted && (terminatorStarted = NewLine[1] == value))
+            {
+                Flush2Log();
+            }
         }
 
         private void Flush2Log()
         {
             if (builder.Length > NewLine.Length)
+            {
                 Logger.Debug(builder.ToString());
+            }
+
             builder.Clear();
             terminatorStarted = false;
         }

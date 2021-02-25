@@ -1,4 +1,5 @@
-﻿using Binance.Net.Enums;
+﻿using Binance.Net;
+using Binance.Net.Enums;
 using Binance.Net.Interfaces;
 using Binance.Net.Interfaces.SocketSubClient;
 using Binance.Net.Interfaces.SubClients;
@@ -8,6 +9,7 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Trady.Core.Infrastructure;
 
@@ -21,6 +23,8 @@ namespace ImMillionaire.Brain.Core
 
         protected Binance.Net.Interfaces.IBinanceClient Client { get; }
 
+        protected CancellationTokenSource tokenSource = new CancellationTokenSource();
+
         public IBinanceClientMarket Market { get; protected set; }
 
         public IBinanceClientUserStream UserStream { get; protected set; }
@@ -30,10 +34,6 @@ namespace ImMillionaire.Brain.Core
         protected AccountBinanceSymbol BinanceSymbol { get; set; }
 
         protected string listenKey;
-
-        public int DecimalQuantity { get; set; }
-
-        public int DecimalPrice { get; set; }
 
         public decimal GetCurrentTradePrice { get; set; }
 
@@ -104,10 +104,14 @@ namespace ImMillionaire.Brain.Core
             return 0;
         }
 
-        protected void CalculateDecimal(AccountBinanceSymbol accountBinanceSymbol)
+        protected decimal ClampQuantity(decimal quantity)
         {
-            DecimalQuantity = CalculateDecimal(accountBinanceSymbol.LotSizeFilter.StepSize);
-            DecimalPrice = CalculateDecimal(accountBinanceSymbol.PriceFilter.TickSize);
+            return quantity.TruncateDecimal(CalculateDecimal(BinanceSymbol.LotSizeFilter.StepSize));
+        }
+
+        protected decimal ClampPrice(decimal price)
+        {
+            return decimal.Round(price, CalculateDecimal(BinanceSymbol.PriceFilter.TickSize));
         }
 
         protected void GetListenKey()
@@ -125,20 +129,35 @@ namespace ImMillionaire.Brain.Core
 
         protected async void KeepAliveListenKey()
         {
-            while (true)
+            while (!tokenSource.IsCancellationRequested)
             {
-                await Task.Delay(new TimeSpan(0, 50, 0));
-
-                if (!UserStream.KeepAliveUserStream(listenKey).Success)
+                try
                 {
-                    Logger.Information("KeepAliveListenKey Fail execute GetListenKey");
-                    GetListenKey();
+                    await Task.Delay(new TimeSpan(0, 30, 0), tokenSource.Token);
+
+                    if (!UserStream.KeepAliveUserStream(listenKey).Success)
+                    {
+                        Logger.Information("KeepAliveListenKey Fail execute GetListenKey");
+                        GetListenKey();
+                    }
                 }
+                catch (Exception)
+                {
+                }              
             }
         }
 
+        public void StopListenKey()
+        {
+            if (!string.IsNullOrWhiteSpace(listenKey)) UserStream.StopUserStream(listenKey);
+        }
+
+        /// <summary>
+        /// Dispose() calls Dispose(true)
+        /// </summary>
         public void Dispose()
         {
+            tokenSource.Cancel();
             Client?.Dispose();
             SocketClient?.UnsubscribeAll();
             SocketClient?.Dispose();

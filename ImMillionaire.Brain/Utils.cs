@@ -4,7 +4,7 @@ namespace ImMillionaire.Brain
 {
     public static class Utils
     {
-        public static decimal TruncateDecimal(decimal value, int precision)
+        public static decimal TruncateDecimal(this decimal value, int precision)
         {
             int step = (int)Math.Pow(10, precision);
             return Math.Truncate(step * value) / step;

@@ -30,7 +30,6 @@ namespace ImMillionaire.Brain.Core
             BinanceSymbol binanceSymbol = Client.Spot.System.GetExchangeInfo().Data.Symbols.FirstOrDefault(x => x.Name == symbol);
             if (binanceSymbol == null) throw new Exception("Symbol don't exist!");
             BinanceSymbol = new AccountBinanceSymbol(binanceSymbol);
-            CalculateDecimal(BinanceSymbol);
             Logger.Information("BinanceSymbol: {0}", BinanceSymbol.Name);
 
             SubscribeToOrderBookUpdates(eventOrderBook);

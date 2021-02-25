@@ -9,15 +9,14 @@ using Trady.Core.Infrastructure;
 
 namespace ImMillionaire.Brain
 {
-    public class MyBotTrade : BaseBot
+    public class TestBotTrade : BaseBot
     {
-        public MyBotTrade(IBinanceClientFactory factory, ILogger logger) : base(factory, logger)
+        public TestBotTrade(IBinanceClientFactory factory, ILogger logger) : base(factory, logger)
         {
         }
 
         protected override void RegisterCandlestickUpdates()
         {
-            //SubscribeCandlesticks(KlineInterval.OneHour, (candlestick, candle) => MyCandle.SetOneHour(candlestick));
         }
 
         protected override void KlineUpdates(IList<IOhlcv> candlesticks, Candlestick candle)
@@ -28,12 +27,11 @@ namespace ImMillionaire.Brain
 
             decimal rsi14 = rsi.Last().Tick.Value;
             decimal rsi14prev = rsi[rsi.Count - 1].Tick.Value;
-
             if (rsi14 > 70m)
             {
-                //  Utils.ErrorLog("overbuyed sell mf");
+                SellLimit();
             }
-            else if (rsi14 < 33m && rsi14prev < 30 && rsi14 > rsi14prev)
+            else if (rsi14 < 39m && rsi14prev < 30 && rsi14 > rsi14prev)
             {
                 BuyLimit();
             }
@@ -53,7 +51,6 @@ namespace ImMillionaire.Brain
                         break;
                     case OrderStatus.Filled:
                         PlacedOrder = order;
-                        SellLimit();
                         break;
                     case OrderStatus.Canceled:
                     case OrderStatus.PendingCancel:

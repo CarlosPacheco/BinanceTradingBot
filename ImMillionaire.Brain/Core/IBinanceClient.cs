@@ -16,10 +16,6 @@ namespace ImMillionaire.Brain.Core
 
         AccountBinanceSymbol GetAccountBinanceSymbol();
 
-        int DecimalQuantity { get; }
-
-        int DecimalPrice { get; }
-
         IBinanceClientMarket Market { get; }
 
         IBinanceClientUserStream UserStream { get; }
@@ -47,5 +43,7 @@ namespace ImMillionaire.Brain.Core
         void SubscribeToKlineUpdates(IList<IOhlcv> candlestick, KlineInterval interval, Action<IList<IOhlcv>, Candlestick> calculateIndicators);
 
         void StartSocketConnections(string symbol, Action<EventOrderBook> eventOrderBook, Action<Order> orderUpdate);
+
+        void StopListenKey();
     }
 }

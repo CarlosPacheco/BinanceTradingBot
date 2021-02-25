@@ -1,4 +1,5 @@
 ﻿using Binance.Net;
+using Binance.Net.Enums;
 using Binance.Net.Interfaces;
 using Binance.Net.Objects.Spot;
 using CryptoExchange.Net.Authentication;
@@ -19,7 +20,7 @@ namespace ImMillionaire.Brain.Core
         {
             services.AddSingleton(config => Configuration);
             // IoC Logger 
-            services.AddSingleton<ILogger>(Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(Configuration).CreateLogger());
+            services.AddSingleton(Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(Configuration).CreateLogger());
             services.AddSingleton<TextWriterLogger>();
             ConfigOptions config = Configuration.GetSection(ConfigOptions.Position).Get<ConfigOptions>();
 
@@ -36,10 +37,11 @@ namespace ImMillionaire.Brain.Core
              new BinanceSocketClient(new BinanceSocketClientOptions()
              {
                  ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey),
-                 SocketNoDataTimeout = TimeSpan.FromMinutes(5),
                  ReconnectInterval = TimeSpan.FromSeconds(1),
+                 LogWriters = new List<TextWriter> { serviceProvider.GetService<TextWriterLogger>() },
+#if RELEASE
                  LogVerbosity = CryptoExchange.Net.Logging.LogVerbosity.Error,
-                 LogWriters = new List<TextWriter> { serviceProvider.GetService<TextWriterLogger>() }
+#endif
              }));
 
             services.AddTransient<Binance.Net.Interfaces.IBinanceClient>(serviceProvider =>
@@ -47,13 +49,14 @@ namespace ImMillionaire.Brain.Core
             {
                 ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey),
                 LogWriters = new List<TextWriter> { serviceProvider.GetService<TextWriterLogger>() },
+                TradeRulesBehaviour = TradeRulesBehaviour.AutoComply,
+#if RELEASE
                 LogVerbosity = CryptoExchange.Net.Logging.LogVerbosity.Error,
-                //AutoTimestamp = true,
-                //AutoTimestampRecalculationInterval = TimeSpan.FromMinutes(30),
+#endif
             }));
 
-            services.AddSingleton<IBotTrade, MyBotTrade>();
-            // services.AddSingleton<IBotTrade, MyBotTradeConservative>();
+            services.AddTransient<IBotTrade, MyBotTrade>();
+            // services.AddTransient<IBotTrade, MyBotTradeConservative>();
         }
     }
 }
