@@ -1,5 +1,4 @@
-﻿using Binance.Net;
-using Binance.Net.Enums;
+﻿using Binance.Net.Enums;
 using Binance.Net.Interfaces;
 using Binance.Net.Interfaces.SocketSubClient;
 using Binance.Net.Interfaces.SubClients;

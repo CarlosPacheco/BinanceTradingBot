@@ -78,12 +78,12 @@ namespace ImMillionaire.Brain
             decimal quantity = PlacedOrder.Quantity;
             if (PlacedOrder.Commission > 0)
             {
-                quantity = PlacedOrder.Quantity - (PlacedOrder.Quantity * (fee / 100));//BNB fee
+                quantity = PlacedOrder.Quantity * (1 - fee / 100);//BNB fee
                 Logger.Warning("buy Commission sell at: {0}", PlacedOrder.Quantity * 0.00075m);
                 percentage += fee;//recovery the fee
             }
 
-            decimal newPrice = PlacedOrder.Price + PlacedOrder.Price * (percentage / 100);
+            decimal newPrice = PlacedOrder.Price * (1 + percentage / 100);
             try
             {
                 if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, quantity, newPrice, TimeInForce.GoodTillCancel, out Order order))

@@ -110,7 +110,7 @@ namespace ImMillionaire.Brain.Core
                     if (dynamicMarginOfSafe > marginOfSafe) marginOfSafe = dynamicMarginOfSafe;
                     Logger.Warning(" margin of safe buy dynamicMarginOfSafe: {0} marginOfSafe: {1} bidAskSpread: {2}", dynamicMarginOfSafe, marginOfSafe, bidAskSpread);
                     // margin of safe to buy in the best price 0.02%
-                    price = MarketPrice - MarketPrice * (marginOfSafe / 100);
+                    price = MarketPrice * (1 - marginOfSafe / 100);
                     marginOfSafe += 0.004m;
                 }
             }
@@ -165,17 +165,23 @@ namespace ImMillionaire.Brain.Core
                 tokenSource = new CancellationTokenSource();
             }
 
-            Task.Run(() =>
+            Task.Run(async () =>
             {
-                Thread.Sleep(TimeSpan.FromSeconds(waitSecondsBeforeCancel));
-                if (PlacedOrder == null || tokenSource.IsCancellationRequested) return;
-
-                if (BinanceClient.TryGetOrder(PlacedOrder.OrderId, out Order order))
+                try
                 {
-                    if (order.Status == OrderStatus.New)
+                    await Task.Delay(TimeSpan.FromSeconds(waitSecondsBeforeCancel), tokenSource.Token);
+                    if (PlacedOrder == null || tokenSource.IsCancellationRequested) return;
+
+                    if (BinanceClient.TryGetOrder(PlacedOrder.OrderId, out Order order))
                     {
-                        BinanceClient.CancelOrderAsync(PlacedOrder.OrderId);
+                        if (order.Status == OrderStatus.New)
+                        {
+                            await BinanceClient.CancelOrderAsync(PlacedOrder.OrderId);
+                        }
                     }
+                }
+                catch (Exception)
+                {
                 }
             }, tokenSource.Token);
         }

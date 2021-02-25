@@ -149,7 +149,7 @@ namespace ImMillionaire.Brain
         {
             decimal percentage = 0.10m;
             decimal amount = PlacedOrder.Quantity;
-            decimal newPrice = PlacedOrder.Price + PlacedOrder.Price * (percentage / 100);
+            decimal newPrice = PlacedOrder.Price * (1 + percentage / 100);
 
             try
             {

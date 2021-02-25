@@ -48,6 +48,7 @@ namespace ImMillionaire.Brain
                 switch (order.Status)
                 {
                     case OrderStatus.PartiallyFilled:
+                        if (tokenSource.IsCancellationRequested) break;
                         tokenSource.Cancel();
                         Logger.Information("Cancel CheckBuyWasExecuted");
                         break;
