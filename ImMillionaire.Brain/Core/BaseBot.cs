@@ -121,7 +121,7 @@ namespace ImMillionaire.Brain.Core
             if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, quantity, price, TimeInForce.GoodTillCancel, out Order order))
             {
                 PlacedOrder = order;
-                CheckBuyWasExecuted(40);
+                CheckBuyWasExecuted(Bot.WaitSecondsBeforeCancelOrder);
                 Logger.Warning("place buy at: {0}", price);
             }
         }

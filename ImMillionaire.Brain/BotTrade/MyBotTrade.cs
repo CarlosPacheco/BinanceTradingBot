@@ -24,16 +24,17 @@ namespace ImMillionaire.Brain
         {
             IReadOnlyList<AnalyzableTick<decimal?>> rsi = candlesticks.Rsi(14);
 
-            if (rsi.Count < 2) return;
+            if (rsi.Count < 3) return;
 
             decimal rsi14 = rsi.Last().Tick.Value;
             decimal rsi14prev = rsi[rsi.Count - 2].Tick.Value;
+            decimal rsi14prev2 = rsi[rsi.Count - 3].Tick.Value;
 
             if (rsi14 > 70m)
             {
                 //  Utils.ErrorLog("overbuyed sell mf");
             }
-            else if (rsi14 < 33m && rsi14prev < 30 && rsi14 > rsi14prev)
+            else if (rsi14 < 33m && rsi14prev < 30 && rsi14 > rsi14prev && rsi14prev > rsi14prev2)
             {
                 BuyLimit();
             }

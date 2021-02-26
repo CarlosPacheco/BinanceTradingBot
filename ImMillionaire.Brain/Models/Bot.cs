@@ -26,5 +26,10 @@ namespace ImMillionaire.Brain.Models
         public decimal SellMarginOfSafe { get; set; }
 
         public decimal BuyMarginOfSafe { get; set; }
+
+        /// <summary>
+        /// Time in seconds to wait before cancel a order not yet execute
+        /// </summary>
+        public int WaitSecondsBeforeCancelOrder { get; set; }
     }
 }

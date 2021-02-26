@@ -11,7 +11,8 @@
     "WonAmount": 0.0,
     "Amount": 0.0,
     "SellMarginOfSafe": 0.50,
-    "BuyMarginOfSafe": 0.025
+    "BuyMarginOfSafe": 0.025,
+    "WaitSecondsBeforeCancelOrder": 40
   },
   {
     "Id": 2,
@@ -25,6 +26,7 @@
     "WonAmount": 0.0,
     "Amount": 1000.0,
     "SellMarginOfSafe": 0.50,
-    "BuyMarginOfSafe": 0.025
+    "BuyMarginOfSafe": 0.025,
+    "WaitSecondsBeforeCancelOrder": 40
   }
 ]
