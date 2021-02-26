@@ -26,7 +26,7 @@ namespace ImMillionaire.Brain
             if (rsi.Count < 2) return;
 
             decimal rsi14 = rsi.Last().Tick.Value;
-            decimal rsi14prev = rsi[rsi.Count - 1].Tick.Value;
+            decimal rsi14prev = rsi[rsi.Count - 2].Tick.Value;
             if (rsi14 > 70m)
             {
                 SellLimit();
