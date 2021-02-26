@@ -56,6 +56,8 @@ namespace ImMillionaire.Brain.Core
 
         private void InternalOrderUpdate(Order order)
         {
+            Logger.Information("InternalOrderUpdate {@Order}", order);
+            Logger.Information("InternalOrderUpdate {@PlacedOrder}", PlacedOrder);
             if (PlacedOrder == null || order.Status == OrderStatus.New || order.Symbol != Bot.Symbol || order.OrderId != PlacedOrder.OrderId) return;
 
             OrderUpdate(order);
@@ -110,7 +112,7 @@ namespace ImMillionaire.Brain.Core
                     if (dynamicMarginOfSafe > marginOfSafe) marginOfSafe = dynamicMarginOfSafe;
                     Logger.Warning(" margin of safe buy dynamicMarginOfSafe: {0} marginOfSafe: {1} bidAskSpread: {2}", dynamicMarginOfSafe, marginOfSafe, bidAskSpread);
                     // margin of safe to buy in the best price 0.02%
-                    price = MarketPrice * (1 - marginOfSafe / 100);
+                    price = MarketPrice * (1m - marginOfSafe / 100);
                     marginOfSafe += 0.004m;
                 }
             }
@@ -122,7 +124,7 @@ namespace ImMillionaire.Brain.Core
             {
                 PlacedOrder = order;
                 CheckBuyWasExecuted(Bot.WaitSecondsBeforeCancelOrder);
-                Logger.Warning("place buy at: {0}", price);
+                Logger.Warning("place buy at: {0}", order.Price);
             }
         }
 
@@ -136,25 +138,17 @@ namespace ImMillionaire.Brain.Core
             decimal quantity = PlacedOrder.Quantity;
             if (PlacedOrder.Commission > 0)
             {
-                quantity = PlacedOrder.Quantity * (1 - fee / 100);//BNB fee
+                quantity = PlacedOrder.Quantity * (1m - fee / 100);//BNB fee
                 Logger.Warning("buy Commission sell at: {0} {@PlacedOrder}", PlacedOrder.Quantity * (fee / 100), PlacedOrder);
                 percentage += fee;//recovery the fee
             }
 
-            decimal newPrice = PlacedOrder.Price * (1 + percentage / 100);
+            decimal newPrice = PlacedOrder.Price * (1m + percentage / 100);
             if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, quantity, newPrice, TimeInForce.GoodTillCancel, out Order order))
             {
                 PlacedOrder = order;
-                Logger.Warning("place sell at: {0}", newPrice);
+                Logger.Warning("place sell at: {0}", order.Price);
             }
-        }
-
-        public virtual async void BuyLimitAsync()
-        {
-        }
-
-        public virtual async void SellLimitAsync()
-        {
         }
 
         protected void CheckBuyWasExecuted(int waitSecondsBeforeCancel = 60)

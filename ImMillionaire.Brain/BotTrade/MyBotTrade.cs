@@ -34,7 +34,7 @@ namespace ImMillionaire.Brain
             {
                 //  Utils.ErrorLog("overbuyed sell mf");
             }
-            else if (rsi14 < 33m && rsi14prev < 30 && rsi14 > rsi14prev && rsi14prev > rsi14prev2)
+            else if (rsi14prev < 35m && rsi14prev2 < 30 && rsi14 > rsi14prev && rsi14prev > rsi14prev2)
             {
                 BuyLimit();
             }

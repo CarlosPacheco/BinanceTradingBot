@@ -98,7 +98,6 @@ namespace ImMillionaire.Brain.Core
             }
 
             CallResult<UpdateSubscription> successAccount = BinanceSocketClientSpot.SubscribeToUserDataUpdates(listenKey,
-            null,// Handle account info data
             (BinanceStreamOrderUpdate data) => orderUpdate(new Order(data)), // Handle order update info data
             null, // Handler for OCO updates
             null, // Handler for position updates

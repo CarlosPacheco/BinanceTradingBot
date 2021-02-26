@@ -1,8 +1,8 @@
 ﻿[
   {
     "Id": 1,
-    "Symbol": "ETHBUSD",
-    "Base": "ETH",
+    "Symbol": "ADABUSD",
+    "Base": "ADA",
     "Quote": "BUSD",
     "Type": "Margin",
     "KlineInterval": "OneMinute",
@@ -11,8 +11,8 @@
     "WonAmount": 0.0,
     "Amount": 0.0,
     "SellMarginOfSafe": 0.50,
-    "BuyMarginOfSafe": 0.025,
-    "WaitSecondsBeforeCancelOrder": 40
+    "BuyMarginOfSafe": 0.041,
+    "WaitSecondsBeforeCancelOrder": 60
   },
   {
     "Id": 2,
