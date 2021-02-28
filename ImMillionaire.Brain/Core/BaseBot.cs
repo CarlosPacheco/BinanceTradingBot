@@ -24,7 +24,7 @@ namespace ImMillionaire.Brain.Core
 
         protected Dictionary<KlineInterval, IList<IOhlcv>> Candlesticks { get; } = new Dictionary<KlineInterval, IList<IOhlcv>>();
 
-        protected CancellationTokenSource tokenSource = new CancellationTokenSource();
+        protected CancellationTokenSource TokenSourceBuyWasExecuted = new CancellationTokenSource();
 
         protected Bot Bot { get; set; }
 
@@ -56,11 +56,18 @@ namespace ImMillionaire.Brain.Core
 
         private void InternalOrderUpdate(Order order)
         {
-            Logger.Information("InternalOrderUpdate {@Order}", order);
-            Logger.Information("InternalOrderUpdate {@PlacedOrder}", PlacedOrder);
-            if (PlacedOrder == null || order.Status == OrderStatus.New || order.Symbol != Bot.Symbol || order.OrderId != PlacedOrder.OrderId) return;
+            try
+            {
+                Logger.Information("InternalOrderUpdate order: {@Order}", order);
+                Logger.Information("InternalOrderUpdate current PlacedOrder: {@PlacedOrder}", PlacedOrder);
+                if (PlacedOrder == null || order.Status == OrderStatus.New || order.Symbol != Bot.Symbol || order.OrderId != PlacedOrder.OrderId) return;
 
-            OrderUpdate(order);
+                OrderUpdate(order);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("InternalOrderUpdate {@ex}", ex);
+            }
         }
 
         private void InternalKlineUpdates(IList<IOhlcv> candlesticks, Candlestick candle)
@@ -80,7 +87,54 @@ namespace ImMillionaire.Brain.Core
 
         protected abstract void RegisterCandlestickUpdates();
 
-        protected abstract void OrderUpdate(Order order);
+        protected virtual void OrderUpdate(Order order)
+        {
+            Logger.Information("Order {@Order}", order);
+            // Handle order update info data
+            if (order.Side == OrderSide.Buy)
+            {
+                switch (order.Status)
+                {
+                    case OrderStatus.PartiallyFilled:
+                        if (TokenSourceBuyWasExecuted.IsCancellationRequested) break;
+                        TokenSourceBuyWasExecuted.Cancel();
+                        Logger.Information("Cancel CheckBuyWasExecuted");
+                        break;
+                    case OrderStatus.Filled:
+                        PlacedOrder = order;
+                        if (Bot.PlaceSellWhenBuyFilled) SellLimit();
+                        break;
+                    case OrderStatus.Canceled:
+                    case OrderStatus.PendingCancel:
+                    case OrderStatus.Rejected:
+                    case OrderStatus.Expired:
+                        Logger.Information("Cancel buy");
+                        PlacedOrder = null;
+                        break;
+                    default:
+                        break;
+                }
+            }
+            else //OrderSide.Sell
+            {
+                switch (order.Status)
+                {
+                    case OrderStatus.Filled:
+                        Logger.Information("Sell");
+                        PlacedOrder = null;
+                        break;
+                    case OrderStatus.Canceled:
+                    case OrderStatus.PendingCancel:
+                    case OrderStatus.Rejected:
+                    case OrderStatus.Expired:
+                        Logger.Information("Cancel Sell");
+                        PlacedOrder = null;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
 
         protected void EventOrderBook(EventOrderBook eventOrderBook) => OrderBook = eventOrderBook;
 
@@ -89,7 +143,7 @@ namespace ImMillionaire.Brain.Core
             if (PlacedOrder != null) return;
 
             decimal freeBalance = BinanceClient.GetFreeQuoteBalance();
-            if (freeBalance <= 1 || OrderBook == null) return;
+            if (freeBalance <= 1 || OrderBook == null || freeBalance < BinanceClient.GetAccountBinanceSymbol().NotionalFilter.MinNotional) return;
 
             if (!Bot.UseAllAmount)
             {
@@ -148,23 +202,24 @@ namespace ImMillionaire.Brain.Core
             {
                 PlacedOrder = order;
                 Logger.Warning("place sell at: {0}", order.Price);
+                if (!TokenSourceBuyWasExecuted.IsCancellationRequested) TokenSourceBuyWasExecuted.Cancel();
             }
         }
 
         protected void CheckBuyWasExecuted(int waitSecondsBeforeCancel = 60)
         {
-            if (tokenSource.IsCancellationRequested)
+            if (TokenSourceBuyWasExecuted.IsCancellationRequested)
             {
-                tokenSource.Dispose();
-                tokenSource = new CancellationTokenSource();
+                TokenSourceBuyWasExecuted.Dispose();
+                TokenSourceBuyWasExecuted = new CancellationTokenSource();
             }
 
             Task.Run(async () =>
             {
                 try
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(waitSecondsBeforeCancel), tokenSource.Token);
-                    if (PlacedOrder == null || tokenSource.IsCancellationRequested) return;
+                    await Task.Delay(TimeSpan.FromSeconds(waitSecondsBeforeCancel), TokenSourceBuyWasExecuted.Token);
+                    if (PlacedOrder == null || TokenSourceBuyWasExecuted.IsCancellationRequested) return;
 
                     if (BinanceClient.TryGetOrder(PlacedOrder.OrderId, out Order order))
                     {
@@ -177,12 +232,12 @@ namespace ImMillionaire.Brain.Core
                 catch (Exception)
                 {
                 }
-            }, tokenSource.Token);
+            }, TokenSourceBuyWasExecuted.Token);
         }
 
         public void Dispose()
         {
-            tokenSource?.Dispose();
+            TokenSourceBuyWasExecuted?.Dispose();
             BinanceClient.Dispose();
         }
     }

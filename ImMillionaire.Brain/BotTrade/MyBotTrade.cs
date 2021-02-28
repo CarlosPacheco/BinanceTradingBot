@@ -1,5 +1,4 @@
-﻿using Binance.Net.Enums;
-using ImMillionaire.Brain.Core;
+﻿using ImMillionaire.Brain.Core;
 using Serilog;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,47 +33,9 @@ namespace ImMillionaire.Brain
             {
                 //  Utils.ErrorLog("overbuyed sell mf");
             }
-            else if (rsi14prev < 35m && rsi14prev2 < 30 && rsi14 > rsi14prev && rsi14prev > rsi14prev2)
+            else if (rsi14prev < 36m && rsi14prev2 < 30 && (rsi14 - 3m) > rsi14prev && (rsi14prev - 2m) > rsi14prev2)
             {
                 BuyLimit();
-            }
-        }
-
-        protected override void OrderUpdate(Order order)
-        {
-            Logger.Information("Order {@Order}", order);
-            // Handle order update info data
-            if (order.Side == OrderSide.Buy)
-            {
-                switch (order.Status)
-                {
-                    case OrderStatus.PartiallyFilled:
-                        if (tokenSource.IsCancellationRequested) break;
-                        tokenSource.Cancel();
-                        Logger.Information("Cancel CheckBuyWasExecuted");
-                        break;
-                    case OrderStatus.Filled:
-                        PlacedOrder = order;
-                        SellLimit();
-                        break;
-                    case OrderStatus.Canceled:
-                    case OrderStatus.PendingCancel:
-                    case OrderStatus.Rejected:
-                    case OrderStatus.Expired:
-                        Logger.Information("Cancel buy");
-                        PlacedOrder = null;
-                        break;
-                    default:
-                        break;
-                }
-            }
-            else //OrderSide.Sell
-            {
-                if (order.Status == OrderStatus.Filled)
-                {
-                    Logger.Information("Sell");
-                    PlacedOrder = null;
-                }
             }
         }
 

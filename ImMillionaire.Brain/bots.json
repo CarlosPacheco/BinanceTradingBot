@@ -10,9 +10,10 @@
     "InitAmount": 0.0,
     "WonAmount": 0.0,
     "Amount": 0.0,
-    "SellMarginOfSafe": 0.50,
-    "BuyMarginOfSafe": 0.041,
-    "WaitSecondsBeforeCancelOrder": 60
+    "SellMarginOfSafe": 0.70,
+    "BuyMarginOfSafe": 0.040,
+    "WaitSecondsBeforeCancelOrder": 120,
+    "PlaceSellWhenBuyFilled": true
   },
   {
     "Id": 2,
@@ -20,13 +21,14 @@
     "Base": "ETH",
     "Quote": "BUSD",
     "Type": "Margin",
-    "KlineInterval": "OneMinute",
+    "KlineInterval": "FiveMinutes",
     "UseAllAmount": false,
     "InitAmount": 1000.0,
     "WonAmount": 0.0,
     "Amount": 1000.0,
     "SellMarginOfSafe": 0.50,
     "BuyMarginOfSafe": 0.025,
-    "WaitSecondsBeforeCancelOrder": 40
+    "WaitSecondsBeforeCancelOrder": 40,
+    "PlaceSellWhenBuyFilled": false
   }
 ]

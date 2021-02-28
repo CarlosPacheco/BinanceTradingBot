@@ -31,5 +31,10 @@ namespace ImMillionaire.Brain.Models
         /// Time in seconds to wait before cancel a order not yet execute
         /// </summary>
         public int WaitSecondsBeforeCancelOrder { get; set; }
+
+        /// <summary>
+        /// Place a sell order when the buy order was filled
+        /// </summary>
+        public bool PlaceSellWhenBuyFilled { get; set; }
     }
 }
