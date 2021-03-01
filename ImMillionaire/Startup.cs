@@ -9,10 +9,14 @@ using ImMillionaire.Brain.Core;
 using ImMillionaire.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ImMillionaire
 {
@@ -58,6 +62,47 @@ namespace ImMillionaire
             }));
 
             services.AddTransient<IBotTrade, MyBotTrade>();
+        }
+    }
+
+    internal class LifetimeEventsHostedService : IHostedService
+    {
+        private readonly ILogger<LifetimeEventsHostedService> _logger;
+        private readonly IHostApplicationLifetime _appLifetime;
+
+        private readonly IBotTradeManager _botTradeManager;
+
+        public LifetimeEventsHostedService(ILogger<LifetimeEventsHostedService> logger, IBotTradeManager botTradeManager, IHostApplicationLifetime appLifetime)
+        {
+            _logger = logger;
+            _botTradeManager = botTradeManager;
+            _appLifetime = appLifetime;
+        }
+
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            _appLifetime.ApplicationStarted.Register(OnStarted);
+            _appLifetime.ApplicationStopped.Register(OnStopped);
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        private void OnStarted()
+        {
+            _logger.LogInformation("OnStarted has been called.");
+            _botTradeManager.Run();
+            // Perform post-startup activities here
+        }
+
+        private void OnStopped()
+        {
+            _logger.LogInformation("OnStopped has been called.");
+
+            // Perform post-stopped activities here
         }
     }
 }
