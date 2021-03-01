@@ -5,7 +5,7 @@ using Binance.Net.Objects.Spot.SpotData;
 using Binance.Net.Objects.Spot.UserStream;
 using System;
 
-namespace ImMillionaire.Brain.Core
+namespace ImMillionaire.Core
 {
     public class Order
     {

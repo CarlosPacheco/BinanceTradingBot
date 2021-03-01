@@ -1,5 +1,6 @@
-﻿using ImMillionaire.Brain.Models;
-using Serilog;
+﻿using ImMillionaire.Brain.Core;
+using ImMillionaire.Brain.Models;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,11 +11,11 @@ namespace ImMillionaire.Brain.BotTrade
 {
     public class BotTradeManager : IBotTradeManager
     {
-        private ILogger Logger { get; }
+        private ILogger<BotTradeManager> Logger { get; }
         private IBotTrade BotTrade { get; }
         private IList<IBotTrade> Bots { get; }
 
-        public BotTradeManager(ILogger logger, IBotTrade botTrade)
+        public BotTradeManager(ILogger<BotTradeManager> logger, IBotTrade botTrade)
         {
             Logger = logger;
             BotTrade = botTrade;
@@ -29,7 +30,7 @@ namespace ImMillionaire.Brain.BotTrade
             }
             catch (Exception ex)
             {
-                Logger.Fatal(ex, "Host terminated unexpectedly. Trying again...");
+                Logger.LogCritical(ex, "Host terminated unexpectedly. Trying again...");
                 Run();
             }
         }

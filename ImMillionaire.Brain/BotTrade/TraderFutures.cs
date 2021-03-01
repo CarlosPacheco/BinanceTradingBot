@@ -1,6 +1,7 @@
 ﻿using Binance.Net.Enums;
 using ImMillionaire.Brain.Core;
-using Serilog;
+using ImMillionaire.Core;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +14,7 @@ namespace ImMillionaire.Brain
     {
         MyCandle MyCandle = new MyCandle();
 
-        public TraderFutures(IBinanceClientFactory factory, ILogger logger) : base(factory, logger)
+        public TraderFutures(IBinanceClientFactory factory, ILogger<TraderFutures> logger) : base(factory, logger)
         {
         }
 
@@ -28,17 +29,17 @@ namespace ImMillionaire.Brain
             if (order.Side == OrderSide.Buy && order.Status == OrderStatus.Filled)
             {
                 PlacedOrder = order;
-                Logger.Information("buy future");
+                Logger.LogInformation("buy future");
                 SellLimit();
             }
             else if (order.Side == OrderSide.Sell && order.Status == OrderStatus.Filled)
             {
-                Logger.Information("sell future");
+                Logger.LogInformation("sell future");
                 PlacedOrder = null;
             }
             else if (order.Side == OrderSide.Buy && order.Status == OrderStatus.Canceled)
             {
-                Logger.Information("cancel buy future");
+                Logger.LogInformation("cancel buy future");
                 PlacedOrder = null;
             }
         }
@@ -74,13 +75,13 @@ namespace ImMillionaire.Brain
                 {
                     if (MyCandle.OneHourRsi14 > 70m)
                     {
-                        Logger.Information("up trend sell future");
+                        Logger.LogInformation("up trend sell future");
                     }
 
                     if (xptoUp.HasValue && xptoUp == true)
                     {
                         BuyLimit();
-                        Logger.Information("up trend buy future");
+                        Logger.LogInformation("up trend buy future");
                         xptoUp = false;
                         xptoDown = true;
                     }
@@ -98,7 +99,7 @@ namespace ImMillionaire.Brain
                     if (xptoDown.HasValue && xptoDown == true)
                     {
                         //  SellNow();
-                        Logger.Information("Bot end init");
+                        Logger.LogInformation("Bot end init");
                         xptoDown = false;
                         xptoUp = true;
                     }
@@ -134,11 +135,11 @@ namespace ImMillionaire.Brain
                     {
                         PlacedOrder = order;
                         CheckBuyWasExecuted();
-                        Logger.Warning("future place buy at: {0} {1}", price, OrderBook.LastAskPrice);
+                        Logger.LogWarning("future place buy at: {0} {1}", price, OrderBook.LastAskPrice);
                     }
                     else
                     {
-                        Logger.Warning("future error place buy at: {0} {1}", price, amount);
+                        Logger.LogWarning("future error place buy at: {0} {1}", price, amount);
                     }
                 }
 
@@ -155,12 +156,12 @@ namespace ImMillionaire.Brain
             {
                 if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, amount, newPrice, TimeInForce.GoodTillCancel, out Order order))
                 {
-                    Logger.Warning("place sell at: {0}", newPrice);
+                    Logger.LogWarning("place sell at: {0}", newPrice);
                 }
             }
             catch (Exception ex)
             {
-                Logger.Fatal("error sell price: {0} amount: {1} {2}", newPrice, amount, ex.Message);
+                Logger.LogCritical("error sell price: {0} amount: {1} {2}", newPrice, amount, ex.Message);
             }
         }
 

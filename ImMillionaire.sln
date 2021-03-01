@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30128.74
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImMillionaire", "ImMillionaire\ImMillionaire.csproj", "{CC2F5C00-0856-468A-B7BC-D057E2C66EA6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ImMillionaire", "ImMillionaire\ImMillionaire.csproj", "{CC2F5C00-0856-468A-B7BC-D057E2C66EA6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImMillionaire.Brain", "ImMillionaire.Brain\ImMillionaire.Brain.csproj", "{4C8C75A0-43EE-4004-BD88-ABA4E6BBDB4C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ImMillionaire.Brain", "ImMillionaire.Brain\ImMillionaire.Brain.csproj", "{4C8C75A0-43EE-4004-BD88-ABA4E6BBDB4C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImMillionaire.Core", "ImMillionaire.Core\ImMillionaire.Core.csproj", "{1EE5A996-DE68-46AF-B511-A1ABF5787933}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{4C8C75A0-43EE-4004-BD88-ABA4E6BBDB4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4C8C75A0-43EE-4004-BD88-ABA4E6BBDB4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4C8C75A0-43EE-4004-BD88-ABA4E6BBDB4C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1EE5A996-DE68-46AF-B511-A1ABF5787933}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1EE5A996-DE68-46AF-B511-A1ABF5787933}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1EE5A996-DE68-46AF-B511-A1ABF5787933}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1EE5A996-DE68-46AF-B511-A1ABF5787933}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

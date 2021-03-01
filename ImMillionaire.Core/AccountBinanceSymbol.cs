@@ -2,7 +2,7 @@
 using Binance.Net.Objects.Spot.MarketData;
 using BinanceSymbolLotSizeFilter = Binance.Net.Objects.Spot.MarketData.BinanceSymbolLotSizeFilter;
 
-namespace ImMillionaire.Brain.Core
+namespace ImMillionaire.Core
 {
     public class AccountBinanceSymbol
     {

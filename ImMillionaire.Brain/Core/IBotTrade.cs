@@ -1,6 +1,6 @@
 ﻿using ImMillionaire.Brain.Models;
 
-namespace ImMillionaire.Brain
+namespace ImMillionaire.Brain.Core
 {
     public interface IBotTrade
     {

@@ -1,7 +1,7 @@
 ﻿using Binance.Net.Interfaces;
 using Trady.Core;
 
-namespace ImMillionaire.Brain
+namespace ImMillionaire.Core
 {
     public class Candlestick : Candle
     {

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ImMillionaire.Brain.Core.Enums
+namespace ImMillionaire.Core.Enums
 {
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum WalletType

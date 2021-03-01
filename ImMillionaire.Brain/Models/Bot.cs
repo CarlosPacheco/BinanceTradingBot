@@ -1,5 +1,5 @@
 ﻿using Binance.Net.Enums;
-using ImMillionaire.Brain.Core.Enums;
+using ImMillionaire.Core.Enums;
 using System.Text.Json.Serialization;
 
 namespace ImMillionaire.Brain.Models

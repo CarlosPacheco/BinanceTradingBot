@@ -3,7 +3,7 @@ using System.Linq;
 using Trady.Analysis.Extension;
 using Trady.Core.Infrastructure;
 
-namespace ImMillionaire.Brain.Core.SpecificationTrady
+namespace ImMillionaire.Core.SpecificationTrady
 {
     public class EmaSpecification : Specification<IList<IOhlcv>>
     {

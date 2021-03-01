@@ -4,7 +4,7 @@ using Binance.Net.Interfaces.SocketSubClient;
 using Binance.Net.Interfaces.SubClients;
 using CryptoExchange.Net.Objects;
 using CryptoExchange.Net.Sockets;
-using Serilog;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,11 +12,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Trady.Core.Infrastructure;
 
-namespace ImMillionaire.Brain.Core
+namespace ImMillionaire.Core
 {
     public abstract class BinanceClientBase : IDisposable
     {
-        protected ILogger Logger { get; }
+        protected ILogger<BinanceClientBase> Logger { get; }
 
         protected IBinanceSocketClient SocketClient { get; }
 
@@ -36,7 +36,7 @@ namespace ImMillionaire.Brain.Core
 
         public decimal GetCurrentTradePrice { get; set; }
 
-        public BinanceClientBase(IBinanceSocketClient socketClient, Binance.Net.Interfaces.IBinanceClient client, ILogger logger)
+        public BinanceClientBase(IBinanceSocketClient socketClient, Binance.Net.Interfaces.IBinanceClient client, ILogger<BinanceClientBase> logger)
         {
             SocketClient = socketClient;
             Client = client;
@@ -52,7 +52,7 @@ namespace ImMillionaire.Brain.Core
             }
             else
             {
-                Logger.Fatal("{0}", klines.Error?.Message);
+                Logger.LogCritical("{0}", klines.Error?.Message);
             }
 
             return null;
@@ -74,7 +74,7 @@ namespace ImMillionaire.Brain.Core
             });
 
             if (!successKline.Success)
-                Logger.Fatal("SubscribeToKlineUpdates {0}", successKline.Error?.Message);
+                Logger.LogCritical("SubscribeToKlineUpdates {0}", successKline.Error?.Message);
         }
 
         public long Ping()
@@ -122,7 +122,7 @@ namespace ImMillionaire.Brain.Core
             }
             else
             {
-                Logger.Fatal("{0} - GetListenKey", result.Error?.Message);
+                Logger.LogCritical("{0} - GetListenKey", result.Error?.Message);
             }
         }
 
@@ -136,7 +136,7 @@ namespace ImMillionaire.Brain.Core
 
                     if (!UserStream.KeepAliveUserStream(listenKey).Success)
                     {
-                        Logger.Information("KeepAliveListenKey Fail execute GetListenKey");
+                        Logger.LogInformation("KeepAliveListenKey Fail execute GetListenKey");
                         GetListenKey();
                     }
                 }

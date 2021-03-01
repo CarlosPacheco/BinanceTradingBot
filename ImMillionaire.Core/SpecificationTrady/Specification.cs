@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq.Expressions;
 
-namespace ImMillionaire.Brain.Core.SpecificationTrady
+namespace ImMillionaire.Core.SpecificationTrady
 {
     public interface ISpecification<T>
     {

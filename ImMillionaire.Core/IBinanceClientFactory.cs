@@ -1,6 +1,6 @@
-﻿using ImMillionaire.Brain.Core.Enums;
+﻿using ImMillionaire.Core.Enums;
 
-namespace ImMillionaire.Brain.Core
+namespace ImMillionaire.Core
 {
     public interface IBinanceClientFactory
     {

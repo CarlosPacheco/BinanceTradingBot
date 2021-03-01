@@ -7,18 +7,18 @@ using Binance.Net.Objects.Spot.SpotData;
 using Binance.Net.Objects.Spot.UserStream;
 using CryptoExchange.Net.Objects;
 using CryptoExchange.Net.Sockets;
-using Serilog;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace ImMillionaire.Brain.Core
+namespace ImMillionaire.Core
 {
     public class BinanceClientMargin : BinanceClientBase, IBinanceClient
     {
         public IBinanceSocketClientSpot BinanceSocketClientSpot { get; }
 
-        public BinanceClientMargin(IBinanceSocketClient socketClient, Binance.Net.Interfaces.IBinanceClient client, ILogger logger) : base(socketClient, client, logger)
+        public BinanceClientMargin(IBinanceSocketClient socketClient, Binance.Net.Interfaces.IBinanceClient client, ILogger<BinanceClientMargin> logger) : base(socketClient, client, logger)
         {
             Market = Client.Spot.Market;
             UserStream = Client.Margin.UserStream;
@@ -30,7 +30,7 @@ namespace ImMillionaire.Brain.Core
             BinanceSymbol binanceSymbol = Client.Spot.System.GetExchangeInfo().Data.Symbols.FirstOrDefault(x => x.Name == symbol);
             if (binanceSymbol == null) throw new Exception("Symbol don't exist!");
             BinanceSymbol = new AccountBinanceSymbol(binanceSymbol);
-            Logger.Information("BinanceSymbol: {0}", BinanceSymbol.Name);
+            Logger.LogInformation("BinanceSymbol: {0}", BinanceSymbol.Name);
 
             SubscribeToOrderBookUpdates(eventOrderBook);
             GetListenKey();
@@ -44,8 +44,8 @@ namespace ImMillionaire.Brain.Core
             WebCallResult<BinancePlacedOrder> orderRequest = Client.Margin.Order.PlaceMarginOrder(BinanceSymbol.Name, side, type, quantity, null, null, price, timeInForce);
             if (!orderRequest.Success)
             {
-                Logger.Information("error place {0} at: {1}", side, price);
-                Logger.Fatal("{0}", orderRequest.Error?.Message);
+                Logger.LogInformation("error place {0} at: {1}", side, price);
+                Logger.LogCritical("{0}", orderRequest.Error?.Message);
                 return false;
             }
 
@@ -58,8 +58,8 @@ namespace ImMillionaire.Brain.Core
             WebCallResult<BinancePlacedOrder> orderRequest = await Client.Margin.Order.PlaceMarginOrderAsync(BinanceSymbol.Name, side, type, quantity, null, null, price, timeInForce);
             if (!orderRequest.Success)
             {
-                Logger.Information("error place {0} at: {1}", side, price);
-                Logger.Fatal("{0}", orderRequest.Error?.Message);
+                Logger.LogInformation("error place {0} at: {1}", side, price);
+                Logger.LogCritical("{0}", orderRequest.Error?.Message);
                 return (false, null);
             }
 
@@ -72,7 +72,7 @@ namespace ImMillionaire.Brain.Core
             WebCallResult<BinanceOrder> orderRequest = Client.Margin.Order.GetMarginAccountOrder(BinanceSymbol.Name, orderId);
             if (!orderRequest.Success)
             {
-                Logger.Fatal("{0}", orderRequest.Error?.Message);
+                Logger.LogCritical("{0}", orderRequest.Error?.Message);
                 return false;
             }
 
@@ -94,7 +94,7 @@ namespace ImMillionaire.Brain.Core
         {
             if (string.IsNullOrWhiteSpace(listenKey))
             {
-                Logger.Fatal("ListenKey can't be null, maybe you have Api key Restrict access to trusted IPs only enabled");
+                Logger.LogCritical("ListenKey can't be null, maybe you have Api key Restrict access to trusted IPs only enabled");
                 GetListenKey();
             }
 
@@ -105,7 +105,7 @@ namespace ImMillionaire.Brain.Core
             null); // Handler for account balance updates (withdrawals/deposits)
 
             if (!successAccount.Success)
-                Logger.Fatal("SubscribeToUserDataUpdates {0}", successAccount.Error?.Message);
+                Logger.LogCritical("SubscribeToUserDataUpdates {0}", successAccount.Error?.Message);
         }
 
         private void SubscribeToOrderBookUpdates(Action<EventOrderBook> eventOrderBook)
@@ -119,7 +119,7 @@ namespace ImMillionaire.Brain.Core
             });
 
             if (!successDepth.Success)
-                Logger.Fatal("SubscribeToOrderBookUpdates {0}", successDepth.Error?.Message);
+                Logger.LogCritical("SubscribeToOrderBookUpdates {0}", successDepth.Error?.Message);
         }
 
         public decimal GetFreeBaseBalance()
@@ -142,7 +142,7 @@ namespace ImMillionaire.Brain.Core
             }
             else
             {
-                Logger.Fatal("{0}", binanceMarginAccount.Error?.Message);
+                Logger.LogCritical("{0}", binanceMarginAccount.Error?.Message);
             }
 
             return 0;

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ImMillionaire.Brain
+namespace ImMillionaire.Core
 {
     public static class Utils
     {

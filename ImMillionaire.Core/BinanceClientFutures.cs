@@ -6,16 +6,16 @@ using Binance.Net.Objects.Futures.MarketStream;
 using Binance.Net.Objects.Futures.UserStream;
 using CryptoExchange.Net.Objects;
 using CryptoExchange.Net.Sockets;
-using Serilog;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace ImMillionaire.Brain.Core
+namespace ImMillionaire.Core
 {
     public class BinanceClientFutures : BinanceClientBase, IBinanceClient
     {
-        public BinanceClientFutures(IBinanceSocketClient socketClient, Binance.Net.Interfaces.IBinanceClient client, ILogger logger) : base(socketClient, client, logger)
+        public BinanceClientFutures(IBinanceSocketClient socketClient, Binance.Net.Interfaces.IBinanceClient client, ILogger<BinanceClientFutures> logger) : base(socketClient, client, logger)
         {
             Market = Client.FuturesUsdt.Market;
             UserStream = Client.FuturesUsdt.UserStream;
@@ -27,7 +27,7 @@ namespace ImMillionaire.Brain.Core
             BinanceFuturesSymbol binanceSymbol = Client.FuturesUsdt.System.GetExchangeInfo().Data.Symbols.FirstOrDefault(x => x.Name == symbol);
             if (binanceSymbol == null) throw new Exception("Symbol don't exist!");
             BinanceSymbol = new AccountBinanceSymbol(binanceSymbol);
-            Logger.Information("BinanceSymbol: {0}", BinanceSymbol.Name);
+            Logger.LogInformation("BinanceSymbol: {0}", BinanceSymbol.Name);
 
             SubscribeToBookTickerUpdates(eventOrderBook);
             GetListenKey();
@@ -41,7 +41,7 @@ namespace ImMillionaire.Brain.Core
             WebCallResult<BinanceFuturesPlacedOrder> orderRequest = Client.FuturesUsdt.Order.PlaceOrder(BinanceSymbol.Name, side, type, quantity, PositionSide.Both, timeInForce, null, price);
             if (!orderRequest.Success)
             {
-                Logger.Fatal("{0}", orderRequest.Error?.Message);
+                Logger.LogCritical("{0}", orderRequest.Error?.Message);
                 return false;
             }
 
@@ -54,8 +54,8 @@ namespace ImMillionaire.Brain.Core
             WebCallResult<BinanceFuturesPlacedOrder> orderRequest = await Client.FuturesUsdt.Order.PlaceOrderAsync(BinanceSymbol.Name, side, type, quantity, PositionSide.Both, timeInForce, null, price);
             if (!orderRequest.Success)
             {
-                Logger.Warning($"error place {side} at: {price}");
-                Logger.Fatal("{0}", orderRequest.Error?.Message);
+                Logger.LogWarning($"error place {side} at: {price}");
+                Logger.LogCritical("{0}", orderRequest.Error?.Message);
                 return (false, null);
             }
 
@@ -68,7 +68,7 @@ namespace ImMillionaire.Brain.Core
             WebCallResult<BinanceFuturesOrder> orderRequest = Client.FuturesUsdt.Order.GetOrder(BinanceSymbol.Name, orderId);
             if (!orderRequest.Success)
             {
-                Logger.Fatal("{0}", orderRequest.Error?.Message);
+                Logger.LogCritical("{0}", orderRequest.Error?.Message);
                 return false;
             }
 
@@ -90,7 +90,7 @@ namespace ImMillionaire.Brain.Core
         {
             if (string.IsNullOrWhiteSpace(listenKey))
             {
-                Logger.Fatal("ListenKey can't be null, maybe you have Api key Restrict access to trusted IPs only enabled");
+                Logger.LogCritical("ListenKey can't be null, maybe you have Api key Restrict access to trusted IPs only enabled");
                 GetListenKey();
             }
             CallResult<UpdateSubscription> successAccount = SocketClient.FuturesUsdt.SubscribeToUserDataUpdates(listenKey,
@@ -101,14 +101,14 @@ namespace ImMillionaire.Brain.Core
             null); // onListenKeyExpired
 
             if (!successAccount.Success)
-                Logger.Fatal("SubscribeToUserDataUpdates {0}", successAccount.Error?.Message);
+                Logger.LogCritical("SubscribeToUserDataUpdates {0}", successAccount.Error?.Message);
         }
 
         private void SubscribeToBookTickerUpdates(Action<EventOrderBook> eventOrderBook)
         {
             CallResult<UpdateSubscription> success = SocketClient.FuturesUsdt.SubscribeToBookTickerUpdates(BinanceSymbol.Name, (BinanceFuturesStreamBookPrice data) => eventOrderBook(new EventOrderBook(data.BestAskPrice, data.BestBidPrice)));
             if (!success.Success)
-                Logger.Fatal("SubscribeToBookTickerUpdates {0}", success.Error?.Message);
+                Logger.LogCritical("SubscribeToBookTickerUpdates {0}", success.Error?.Message);
         }
 
         public decimal GetFreeBaseBalance()
@@ -132,7 +132,7 @@ namespace ImMillionaire.Brain.Core
             }
             else
             {
-                Logger.Fatal("{0}", binanceAccount.Error?.Message);
+                Logger.LogCritical("{0}", binanceAccount.Error?.Message);
             }
 
             return 0;

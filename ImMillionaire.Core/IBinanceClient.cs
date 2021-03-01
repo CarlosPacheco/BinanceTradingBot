@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Trady.Core.Infrastructure;
 
-namespace ImMillionaire.Brain.Core
+namespace ImMillionaire.Core
 {
     public interface IBinanceClient : IDisposable
     {

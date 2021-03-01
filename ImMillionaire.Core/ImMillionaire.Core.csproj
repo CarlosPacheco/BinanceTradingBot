@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
@@ -8,16 +8,6 @@
     <PackageReference Include="Binance.Net" Version="6.10.0" />
     <PackageReference Include="Trady.Analysis" Version="3.2.8" />
     <PackageReference Include="Trady.Core" Version="3.2.9" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\ImMillionaire.Core\ImMillionaire.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="bots.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
 </Project>

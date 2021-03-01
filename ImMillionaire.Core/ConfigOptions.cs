@@ -1,4 +1,4 @@
-﻿namespace ImMillionaire.Brain.Core
+﻿namespace ImMillionaire.Core
 {
     public class ConfigOptions
     {

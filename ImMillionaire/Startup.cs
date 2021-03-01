@@ -3,8 +3,10 @@ using Binance.Net.Enums;
 using Binance.Net.Interfaces;
 using Binance.Net.Objects.Spot;
 using CryptoExchange.Net.Authentication;
+using ImMillionaire.Brain;
 using ImMillionaire.Brain.BotTrade;
-using ImMillionaire.Brain.Logger;
+using ImMillionaire.Brain.Core;
+using ImMillionaire.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
@@ -12,15 +14,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace ImMillionaire.Brain.Core
+namespace ImMillionaire
 {
-    public class ContainerBuilder
+    public class Startup
     {
         public static void DependencyInjection(IServiceCollection services, IConfiguration Configuration)
         {
             services.AddSingleton(config => Configuration);
             // IoC Logger 
-            services.AddSingleton(Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(Configuration).CreateLogger());
+            Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(Configuration).CreateLogger();
             services.AddSingleton<TextWriterLogger>();
             ConfigOptions config = Configuration.GetSection(ConfigOptions.Position).Get<ConfigOptions>();
 
@@ -56,7 +58,6 @@ namespace ImMillionaire.Brain.Core
             }));
 
             services.AddTransient<IBotTrade, MyBotTrade>();
-            // services.AddTransient<IBotTrade, MyBotTradeConservative>();
         }
     }
 }

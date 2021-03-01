@@ -1,16 +1,16 @@
-﻿using Serilog;
+﻿using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Text;
 
-namespace ImMillionaire.Brain.Logger
+namespace ImMillionaire.Core
 {
     public class TextWriterLogger : TextWriter
     {
-        private ILogger Logger;
-        private StringBuilder builder = new StringBuilder();
+        private readonly ILogger<TextWriterLogger> Logger;
+        private readonly StringBuilder builder = new StringBuilder();
         private bool terminatorStarted = false;
 
-        public TextWriterLogger(ILogger logger)
+        public TextWriterLogger(ILogger<TextWriterLogger> logger)
         {
             Logger = logger;
         }
@@ -19,7 +19,7 @@ namespace ImMillionaire.Brain.Logger
         {
             if (string.IsNullOrWhiteSpace(value)) return;
 
-            Logger.Debug(value);
+            Logger.LogDebug(value);
         }
 
         public override void Write(char value)
@@ -46,7 +46,7 @@ namespace ImMillionaire.Brain.Logger
         {
             if (builder.Length > NewLine.Length)
             {
-                Logger.Debug(builder.ToString());
+                Logger.LogDebug(builder.ToString());
             }
 
             builder.Clear();

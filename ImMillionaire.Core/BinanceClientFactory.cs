@@ -1,8 +1,8 @@
-﻿using ImMillionaire.Brain.Core.Enums;
+﻿using ImMillionaire.Core.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 
-namespace ImMillionaire.Brain.Core
+namespace ImMillionaire.Core
 {
     public class BinanceClientFactory : IBinanceClientFactory
     {

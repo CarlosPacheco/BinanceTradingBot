@@ -1,5 +1,6 @@
 ﻿using ImMillionaire.Brain.Core;
-using Serilog;
+using ImMillionaire.Core;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Linq;
 using Trady.Analysis;
@@ -10,7 +11,7 @@ namespace ImMillionaire.Brain
 {
     public class TestBotTrade : BaseBot
     {
-        public TestBotTrade(IBinanceClientFactory factory, ILogger logger) : base(factory, logger)
+        public TestBotTrade(IBinanceClientFactory factory, ILogger<TestBotTrade> logger) : base(factory, logger)
         {
         }
 
