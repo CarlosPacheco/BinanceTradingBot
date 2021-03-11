@@ -52,7 +52,7 @@ namespace ImMillionaire.Brain.Core
             SubscribeCandlesticks(bot.KlineInterval, InternalKlineUpdates);
             RegisterCandlestickUpdates();
 
-            Logger.LogInformation("Bot end init {@Bot}", Bot);
+            Logger.LogInformation("Bot end init");
         }
 
         private void InternalOrderUpdate(Order order)

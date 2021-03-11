@@ -26,7 +26,7 @@ namespace ImMillionaire
         {
             services.AddSingleton(config => Configuration);
             // IoC Logger 
-            Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(Configuration).CreateLogger();
+            services.AddSingleton(Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(Configuration).CreateLogger());
             services.AddSingleton<TextWriterLogger>();
             ConfigOptions config = Configuration.GetSection(ConfigOptions.Position).Get<ConfigOptions>();
 
