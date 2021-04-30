@@ -26,6 +26,9 @@ namespace ImMillionaire.Brain
 
             if (rsi.Count < 3) return;
 
+            decimal ema250 = candlesticks.Ema(250).Last().Tick.Value;
+            decimal ema140 = candlesticks.Ema(140).Last().Tick.Value;
+
             decimal rsi14 = rsi.Last().Tick.Value;
             decimal rsi14prev = rsi[rsi.Count - 2].Tick.Value;
             decimal rsi14prev2 = rsi[rsi.Count - 3].Tick.Value;
@@ -34,7 +37,7 @@ namespace ImMillionaire.Brain
             {
                 //  Utils.ErrorLog("overbuyed sell mf");
             }
-            else if (rsi14prev < 36m && rsi14prev2 < 30 && (rsi14 - 3m) > rsi14prev && (rsi14prev - 2m) > rsi14prev2)
+            else if (rsi14prev < 36m && rsi14prev2 < 30 && (rsi14 - 3m) > rsi14prev && (rsi14prev - 2m) > rsi14prev2 && ema250 > MarketPrice && ema140 <= ema250)
             {
                 BuyLimit();
             }

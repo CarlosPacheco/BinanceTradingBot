@@ -21,7 +21,7 @@ namespace ImMillionaire.Core
                 WalletType.Spot => ActivatorUtilities.CreateInstance<BinanceClientSpot>(Provider),
                 WalletType.Margin => ActivatorUtilities.CreateInstance<BinanceClientMargin>(Provider),
                 WalletType.Futures => ActivatorUtilities.CreateInstance<BinanceClientFutures>(Provider),
-                _ => null,
+                _ => throw new Exception("Invalid wallet type"),
             };
         }
     }

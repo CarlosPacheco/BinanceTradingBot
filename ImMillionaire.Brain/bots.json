@@ -10,9 +10,9 @@
     "InitAmount": 0.0,
     "WonAmount": 0.0,
     "Amount": 0.0,
-    "SellMarginOfSafe": 0.70,
-    "BuyMarginOfSafe": 0.040,
-    "WaitSecondsBeforeCancelOrder": 120,
+    "SellMarginOfSafe": 0.30,
+    "BuyMarginOfSafe": 0.080,
+    "WaitSecondsBeforeCancelOrder": 60,
     "PlaceSellWhenBuyFilled": true
   },
   {

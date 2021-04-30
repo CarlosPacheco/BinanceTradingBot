@@ -30,6 +30,7 @@ namespace ImMillionaire.Brain.Core
         protected Bot Bot { get; set; }
 
         protected decimal MarketPrice { get; set; }
+        private readonly object _orderLock = new object();
 
         public BaseBot(IBinanceClientFactory factory, ILogger<BaseBot> logger)
         {
@@ -45,7 +46,7 @@ namespace ImMillionaire.Brain.Core
 
             // Public
             Ping = BinanceClient.Ping();
-
+            Logger.LogInformation("Bot binance ping {0}", Ping);
             BinanceClient.StartSocketConnections(bot.Symbol, EventOrderBook, InternalOrderUpdate);
 
             // Candlesticks
@@ -59,11 +60,14 @@ namespace ImMillionaire.Brain.Core
         {
             try
             {
-                Logger.LogInformation("InternalOrderUpdate order: {@Order}", order);
-                Logger.LogInformation("InternalOrderUpdate current PlacedOrder: {@PlacedOrder}", PlacedOrder);
-                if (PlacedOrder == null || order.Status == OrderStatus.New || order.Symbol != Bot.Symbol || order.OrderId != PlacedOrder.OrderId) return;
+                lock (_orderLock)
+                {
+                    Logger.LogInformation("InternalOrderUpdate order: {@Order}", order);
+                    Logger.LogInformation("InternalOrderUpdate current PlacedOrder: {@PlacedOrder}", PlacedOrder);
+                    if (PlacedOrder == null || order.Status == OrderStatus.New || order.Symbol != Bot.Symbol || order.OrderId != PlacedOrder.OrderId) return;
 
-                OrderUpdate(order);
+                    OrderUpdate(order);
+                }
             }
             catch (Exception ex)
             {
@@ -175,11 +179,15 @@ namespace ImMillionaire.Brain.Core
             Logger.LogWarning("buy Market: {0} new price: {1}", MarketPrice, price);
 
             decimal quantity = freeBalance / price;
-            if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, quantity, price, TimeInForce.GoodTillCancel, out Order order))
+
+            lock (_orderLock)
             {
-                PlacedOrder = order;
-                CheckBuyWasExecuted(Bot.WaitSecondsBeforeCancelOrder);
-                Logger.LogWarning("place buy at: {0}", order.Price);
+                if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, quantity, price, TimeInForce.GoodTillCancel, out Order order))
+                {
+                    PlacedOrder = order;
+                    CheckBuyWasExecuted(Bot.WaitSecondsBeforeCancelOrder);
+                    Logger.LogWarning("place buy at: {0}", order.Price);
+                }
             }
         }
 

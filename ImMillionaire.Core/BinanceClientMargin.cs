@@ -27,7 +27,13 @@ namespace ImMillionaire.Core
 
         public void StartSocketConnections(string symbol, Action<EventOrderBook> eventOrderBook, Action<Order> orderUpdate)
         {
-            BinanceSymbol binanceSymbol = Client.Spot.System.GetExchangeInfo().Data.Symbols.FirstOrDefault(x => x.Name == symbol);
+            WebCallResult<BinanceExchangeInfo> exchangeInfo = Client.Spot.System.GetExchangeInfo();
+            if (!exchangeInfo.Success)
+            {
+                Logger.LogCritical("error exchangeInfo  {0}", exchangeInfo.Error?.Message);
+            }
+
+            BinanceSymbol binanceSymbol = exchangeInfo.Data.Symbols.FirstOrDefault(x => x.Name == symbol);
             if (binanceSymbol == null) throw new Exception("Symbol don't exist!");
             BinanceSymbol = new AccountBinanceSymbol(binanceSymbol);
             Logger.LogInformation("BinanceSymbol: {0}", BinanceSymbol.Name);
