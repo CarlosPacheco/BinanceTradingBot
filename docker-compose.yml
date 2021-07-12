@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  db:
+    container_name: binancebot
+    image: binancebot:latest
+    restart: on-failure
+    volumes:
+      - /D/Projects/Dockers/binance-bot/logs:/app/Logs
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Config__ApiKey: your-key-here
+      Config__SecretKey: your-secret-here
+

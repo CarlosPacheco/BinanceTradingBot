@@ -7,7 +7,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ImMillionaire", "ImMilliona
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ImMillionaire.Brain", "ImMillionaire.Brain\ImMillionaire.Brain.csproj", "{4C8C75A0-43EE-4004-BD88-ABA4E6BBDB4C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImMillionaire.Core", "ImMillionaire.Core\ImMillionaire.Core.csproj", "{1EE5A996-DE68-46AF-B511-A1ABF5787933}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ImMillionaire.Core", "ImMillionaire.Core\ImMillionaire.Core.csproj", "{1EE5A996-DE68-46AF-B511-A1ABF5787933}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{29B70E1B-A032-432D-93C3-C212DF6043F8}"
+	ProjectSection(SolutionItems) = preProject
+		Dockerfile = Dockerfile
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
