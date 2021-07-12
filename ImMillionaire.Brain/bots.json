@@ -5,14 +5,14 @@
     "Base": "ADA",
     "Quote": "BUSD",
     "Type": "Margin",
-    "KlineInterval": "OneMinute",
+    "KlineInterval": "ThreeMinutes",
     "UseAllAmount": true,
     "InitAmount": 0.0,
     "WonAmount": 0.0,
     "Amount": 0.0,
-    "SellMarginOfSafe": 0.30,
-    "BuyMarginOfSafe": 0.080,
-    "WaitSecondsBeforeCancelOrder": 60,
+    "SellMarginOfSafe": 0.60,
+    "BuyMarginOfSafe": 0.120,
+    "WaitSecondsBeforeCancelOrder": 80,
     "PlaceSellWhenBuyFilled": true
   },
   {
@@ -30,5 +30,21 @@
     "BuyMarginOfSafe": 0.025,
     "WaitSecondsBeforeCancelOrder": 40,
     "PlaceSellWhenBuyFilled": false
+  },
+  {
+    "Id": 3,
+    "Symbol": "ADABUSD",
+    "Base": "ADA",
+    "Quote": "BUSD",
+    "Type": "Margin",
+    "KlineInterval": "OneMinute",
+    "UseAllAmount": true,
+    "InitAmount": 0.0,
+    "WonAmount": 0.0,
+    "Amount": 0.0,
+    "SellMarginOfSafe": 0.30,
+    "BuyMarginOfSafe": 0.080,
+    "WaitSecondsBeforeCancelOrder": 60,
+    "PlaceSellWhenBuyFilled": true
   }
 ]

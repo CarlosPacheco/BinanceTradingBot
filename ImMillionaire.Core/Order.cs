@@ -159,7 +159,7 @@ namespace ImMillionaire.Core
 
         public Order(BinanceFuturesStreamOrderUpdateData binanceOrder)
         {
-            CreateTime = binanceOrder.CreateTime;
+            CreateTime = binanceOrder.UpdateTime;
             Side = binanceOrder.Side;
             StopPrice = binanceOrder.StopPrice;
             Type = binanceOrder.Type;
@@ -183,10 +183,10 @@ namespace ImMillionaire.Core
             Type = binanceOrder.Type;
             TimeInForce = binanceOrder.TimeInForce;
             Status = binanceOrder.Status;
-            QuoteQuantity = binanceOrder.CumulativeQuantity;
-            QuoteQuantityFilled = binanceOrder.CumulativeQuoteQuantity;
-            QuantityFilled = binanceOrder.ExecutedQuantity;
-            Quantity = binanceOrder.OriginalQuantity;
+            QuoteQuantity = binanceOrder.LastFilledQuantity;
+            QuoteQuantityFilled = binanceOrder.QuoteQuantityFilled;
+            QuantityFilled = binanceOrder.QuantityFilled;
+            Quantity = binanceOrder.Quantity;
             Price = binanceOrder.Price;
             OriginalClientOrderId = binanceOrder.ClientOrderId;
             ClientOrderId = binanceOrder.ClientOrderId;
@@ -202,10 +202,10 @@ namespace ImMillionaire.Core
             Type = binanceOrder.Type;
             TimeInForce = binanceOrder.TimeInForce;
             Status = binanceOrder.Status;
-            QuoteQuantity = binanceOrder.CumulativeQuantity;
-            QuoteQuantityFilled = binanceOrder.CumulativeQuoteQuantity;
-            QuantityFilled = binanceOrder.ExecutedQuantity;
-            Quantity = binanceOrder.OriginalQuantity;
+            QuoteQuantity = binanceOrder.LastFilledQuantity;
+            QuoteQuantityFilled = binanceOrder.QuoteQuantityFilled;
+            QuantityFilled = binanceOrder.QuantityFilled;
+            Quantity = binanceOrder.Quantity;
             Price = binanceOrder.Price;
             OriginalClientOrderId = binanceOrder.ClientOrderId;
             ClientOrderId = binanceOrder.ClientOrderId;
