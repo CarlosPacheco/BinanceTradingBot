@@ -5,19 +5,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Binance.Net" Version="6.13.4" />
+    <PackageReference Include="Binance.Net" Version="6.13.5" />
     <PackageReference Include="Trady.Analysis" Version="3.2.8" />
     <PackageReference Include="Trady.Core" Version="3.2.9" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ImMillionaire.Core\ImMillionaire.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="bots.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
 </Project>

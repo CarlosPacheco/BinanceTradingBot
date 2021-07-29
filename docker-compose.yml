@@ -7,6 +7,7 @@ services:
     restart: on-failure
     volumes:
       - /D/Projects/Dockers/binance-bot/logs:/app/Logs
+      - /D/Projects/Dockers/binance-bot/config:/app/Config
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       Config__ApiKey: your-key-here
