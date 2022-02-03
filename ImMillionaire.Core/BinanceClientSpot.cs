@@ -27,7 +27,7 @@ namespace ImMillionaire.Core
 
         public void StartSocketConnections(string symbol, Action<EventOrderBook> eventOrderBook, Action<Order> orderUpdate)
         {
-            BinanceSymbol binanceSymbol = Client.Spot.System.GetExchangeInfo().Data.Symbols.FirstOrDefault(x => x.Name == symbol);
+            BinanceSymbol binanceSymbol = Client.Spot.System.GetExchangeInfoAsync().Result.Data.Symbols.FirstOrDefault(x => x.Name == symbol);
             if (binanceSymbol == null) throw new Exception("Symbol dont exist!");
             BinanceSymbol = new AccountBinanceSymbol(binanceSymbol);
             Logger.LogInformation("BinanceSymbol: {0}", BinanceSymbol.Name);
@@ -41,7 +41,7 @@ namespace ImMillionaire.Core
         public bool TryPlaceOrder(OrderSide side, OrderType type, decimal quantity, decimal price, TimeInForce timeInForce, out Order order)
         {
             order = null;
-            WebCallResult<BinancePlacedOrder> orderRequest = Client.Spot.Order.PlaceOrder(BinanceSymbol.Name, side, type, quantity, null, null, price, timeInForce);
+            WebCallResult<BinancePlacedOrder> orderRequest = Client.Spot.Order.PlaceOrderAsync(BinanceSymbol.Name, side, type, quantity, null, null, price, timeInForce).Result;
             if (!orderRequest.Success)
             {
                 Logger.LogCritical("{0}", orderRequest.Error?.Message);
@@ -68,7 +68,7 @@ namespace ImMillionaire.Core
         public bool TryGetOrder(long orderId, out Order order)
         {
             order = null;
-            WebCallResult<BinanceOrder> orderRequest = Client.Spot.Order.GetOrder(BinanceSymbol.Name, orderId);
+            WebCallResult<BinanceOrder> orderRequest = Client.Spot.Order.GetOrderAsync(BinanceSymbol.Name, orderId).Result;
             if (!orderRequest.Success)
             {
                 Logger.LogCritical("{0}", orderRequest.Error?.Message);
@@ -81,7 +81,7 @@ namespace ImMillionaire.Core
 
         public bool CancelOrder(long orderId)
         {
-            return Client.Spot.Order.CancelOrder(BinanceSymbol.Name, orderId).Success;
+            return Client.Spot.Order.CancelOrderAsync(BinanceSymbol.Name, orderId).Result.Success;
         }
 
         public async Task<bool> CancelOrderAsync(long orderId)
@@ -89,7 +89,7 @@ namespace ImMillionaire.Core
             return (await Client.Spot.Order.CancelOrderAsync(BinanceSymbol.Name, orderId)).Success;
         }
 
-        private void SubscribeToUserDataUpdates(Action<Order> orderUpdate)
+        private async void SubscribeToUserDataUpdates(Action<Order> orderUpdate)
         {
             if (string.IsNullOrWhiteSpace(listenKey))
             {
@@ -97,8 +97,8 @@ namespace ImMillionaire.Core
                 GetListenKey();
             }
 
-            CallResult<UpdateSubscription> successAccount = BinanceSocketClientSpot.SubscribeToUserDataUpdates(listenKey,
-            (BinanceStreamOrderUpdate data) => orderUpdate(new Order(data)), // Handle order update info data
+            CallResult<UpdateSubscription> successAccount = await BinanceSocketClientSpot.SubscribeToUserDataUpdatesAsync(listenKey,
+            (DataEvent<BinanceStreamOrderUpdate> dataEv) => orderUpdate(new Order(dataEv.Data)), // Handle order update info data
             null, // Handler for OCO updates
             null, // Handler for position updates
             null); // Handler for account balance updates (withdrawals/deposits)
@@ -107,13 +107,13 @@ namespace ImMillionaire.Core
                 Logger.LogCritical("SubscribeToUserDataUpdates {0}", successAccount.Error?.Message);
         }
 
-        private void SubscribeToOrderBookUpdates(Action<EventOrderBook> eventOrderBook)
+        private async void SubscribeToOrderBookUpdates(Action<EventOrderBook> eventOrderBook)
         {
-            CallResult<UpdateSubscription> successDepth = BinanceSocketClientSpot.SubscribeToOrderBookUpdates(BinanceSymbol.Name, 1000, (IBinanceEventOrderBook data) =>
+            CallResult<UpdateSubscription> successDepth = await BinanceSocketClientSpot.SubscribeToOrderBookUpdatesAsync(BinanceSymbol.Name, 1000, (DataEvent<IBinanceEventOrderBook> dataEv) =>
             {
-                if (data.Asks.Any() && data.Bids.Any())
+                if (dataEv.Data.Asks.Any() && dataEv.Data.Bids.Any())
                 {
-                    eventOrderBook(new EventOrderBook(data.Asks.First().Price, data.Bids.First().Price));
+                    eventOrderBook(new EventOrderBook(dataEv.Data.Asks.First().Price, dataEv.Data.Bids.First().Price));
                 }
             });
 
@@ -133,7 +133,7 @@ namespace ImMillionaire.Core
 
         public decimal GetFreeBalance(string asset)
         {
-            WebCallResult<BinanceAccountInfo> binanceMarginAccount = Client.General.GetAccountInfo();
+            WebCallResult<BinanceAccountInfo> binanceMarginAccount = Client.General.GetAccountInfoAsync().Result;
             if (binanceMarginAccount.Success)
             {
                 var currentTradingAsset = binanceMarginAccount.Data.Balances.FirstOrDefault(x => x.Asset.ToLower() == asset.ToLower());

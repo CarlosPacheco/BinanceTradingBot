@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Binance.Net" Version="6.13.5" />
+    <PackageReference Include="Binance.Net" Version="7.2.7" />
     <PackageReference Include="Trady.Analysis" Version="3.2.8" />
     <PackageReference Include="Trady.Core" Version="3.2.9" />
   </ItemGroup>

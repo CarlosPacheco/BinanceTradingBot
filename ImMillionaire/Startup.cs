@@ -1,6 +1,7 @@
 ﻿using Binance.Net;
 using Binance.Net.Enums;
 using Binance.Net.Interfaces;
+using Binance.Net.Objects;
 using Binance.Net.Objects.Spot;
 using CryptoExchange.Net.Authentication;
 using ImMillionaire.Brain;
@@ -44,7 +45,6 @@ namespace ImMillionaire
              {
                  ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey),
                  ReconnectInterval = TimeSpan.FromSeconds(1),
-                 LogWriters = new List<TextWriter> { serviceProvider.GetService<TextWriterLogger>() },
 #if RELEASE
                  LogVerbosity = CryptoExchange.Net.Logging.LogVerbosity.Error,
 #endif
@@ -54,7 +54,6 @@ namespace ImMillionaire
             new BinanceClient(new BinanceClientOptions()
             {
                 ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey),
-                LogWriters = new List<TextWriter> { serviceProvider.GetService<TextWriterLogger>() },
                 TradeRulesBehaviour = TradeRulesBehaviour.AutoComply,
 #if RELEASE
                 LogVerbosity = CryptoExchange.Net.Logging.LogVerbosity.Error,

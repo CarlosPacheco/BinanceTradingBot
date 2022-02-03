@@ -45,7 +45,7 @@ namespace ImMillionaire.Core
 
         public IList<IOhlcv> GetKlines(KlineInterval klineInterval)
         {
-            WebCallResult<IEnumerable<IBinanceKline>> klines = Market.GetKlines(BinanceSymbol.Name, klineInterval);
+            WebCallResult<IEnumerable<IBinanceKline>> klines = Market.GetKlinesAsync(BinanceSymbol.Name, klineInterval).Result;
             if (klines.Success)
             {
                 return klines.Data.Select(k => new Candlestick(k)).ToList<IOhlcv>();
@@ -58,16 +58,16 @@ namespace ImMillionaire.Core
             return null;
         }
 
-        public void SubscribeToKlineUpdates(IList<IOhlcv> candlestick, KlineInterval interval, Action<IList<IOhlcv>, Candlestick> calculateIndicators)
+        public async void SubscribeToKlineUpdates(IList<IOhlcv> candlestick, KlineInterval interval, Action<IList<IOhlcv>, Candlestick> calculateIndicators)
         {
-            CallResult<UpdateSubscription> successKline = BinanceSocketClientBase.SubscribeToKlineUpdates(BinanceSymbol.Name, interval, (IBinanceStreamKlineData data) =>
+            CallResult<UpdateSubscription> successKline = await BinanceSocketClientBase.SubscribeToKlineUpdatesAsync(BinanceSymbol.Name, interval, (DataEvent<IBinanceStreamKlineData> dataEv) =>
             {
-                Candlestick candle = new Candlestick(data.Data);
+                Candlestick candle = new Candlestick(dataEv.Data.Data);
                 candlestick.Add(candle);
 
                 calculateIndicators(candlestick, candle);
 
-                if (!data.Data.Final)
+                if (!dataEv.Data.Data.Final)
                 {
                     candlestick.Remove(candle);
                 }
@@ -115,7 +115,7 @@ namespace ImMillionaire.Core
 
         protected void GetListenKey()
         {
-            WebCallResult<string> result = UserStream.StartUserStream();
+            WebCallResult<string> result = UserStream.StartUserStreamAsync().Result;
             if (result.Success)
             {
                 listenKey = result.Data;
@@ -134,7 +134,7 @@ namespace ImMillionaire.Core
                 {
                     await Task.Delay(new TimeSpan(0, 30, 0), tokenSource.Token);
 
-                    if (!UserStream.KeepAliveUserStream(listenKey).Success)
+                    if (!UserStream.KeepAliveUserStreamAsync(listenKey).Result.Success)
                     {
                         Logger.LogInformation("KeepAliveListenKey Fail execute GetListenKey");
                         GetListenKey();
@@ -142,13 +142,13 @@ namespace ImMillionaire.Core
                 }
                 catch (Exception)
                 {
-                }              
+                }
             }
         }
 
         public void StopListenKey()
         {
-            if (!string.IsNullOrWhiteSpace(listenKey)) UserStream.StopUserStream(listenKey);
+            if (!string.IsNullOrWhiteSpace(listenKey)) UserStream.StopUserStreamAsync(listenKey);
         }
 
         /// <summary>
@@ -158,7 +158,7 @@ namespace ImMillionaire.Core
         {
             tokenSource.Cancel();
             Client?.Dispose();
-            SocketClient?.UnsubscribeAll();
+            SocketClient?.UnsubscribeAllAsync().Wait();
             SocketClient?.Dispose();
         }
     }
