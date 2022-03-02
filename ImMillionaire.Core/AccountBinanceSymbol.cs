@@ -1,6 +1,5 @@
-﻿using Binance.Net.Objects.Futures.MarketData;
-using Binance.Net.Objects.Spot.MarketData;
-using BinanceSymbolLotSizeFilter = Binance.Net.Objects.Spot.MarketData.BinanceSymbolLotSizeFilter;
+﻿using Binance.Net.Objects.Models.Futures;
+using Binance.Net.Objects.Models.Spot;
 
 namespace ImMillionaire.Core
 {
@@ -31,11 +30,11 @@ namespace ImMillionaire.Core
         /// </summary>
         public int QuantityPrecision { get; set; }
 
-        public BinanceSymbolLotSizeFilter LotSizeFilter { get; set; }
+        public Binance.Net.Objects.Models.Spot.BinanceSymbolLotSizeFilter LotSizeFilter { get; set; }
 
-        public Binance.Net.Objects.Spot.MarketData.BinanceSymbolPriceFilter PriceFilter { get; set; }
+        public Binance.Net.Objects.Models.Spot.BinanceSymbolPriceFilter PriceFilter { get; set; }
 
-        public Binance.Net.Objects.Spot.MarketData.BinanceSymbolMinNotionalFilter NotionalFilter { get; set; }
+        public Binance.Net.Objects.Models.Spot.BinanceSymbolMinNotionalFilter NotionalFilter { get; set; }
 
         public AccountBinanceSymbol(BinanceSymbol binanceSymbol)
         {
@@ -56,20 +55,20 @@ namespace ImMillionaire.Core
             QuoteAsset = binanceSymbol.QuoteAsset;
             BaseAssetPrecision = binanceSymbol.BaseAssetPrecision;
             QuantityPrecision = binanceSymbol.QuantityPrecision;
-            LotSizeFilter = new BinanceSymbolLotSizeFilter()
+            LotSizeFilter = new Binance.Net.Objects.Models.Spot.BinanceSymbolLotSizeFilter()
             {
                 MinQuantity = binanceSymbol.LotSizeFilter.MinQuantity,
                 MaxQuantity = binanceSymbol.LotSizeFilter.MaxQuantity,
                 StepSize = binanceSymbol.LotSizeFilter.StepSize
             };
-            PriceFilter = new Binance.Net.Objects.Spot.MarketData.BinanceSymbolPriceFilter()
+            PriceFilter = new Binance.Net.Objects.Models.Spot.BinanceSymbolPriceFilter()
             {
                 FilterType = binanceSymbol.PriceFilter.FilterType,
                 MinPrice = binanceSymbol.PriceFilter.MinPrice,
                 MaxPrice = binanceSymbol.PriceFilter.MaxPrice,
                 TickSize = binanceSymbol.PriceFilter.TickSize
             };
-            NotionalFilter = new Binance.Net.Objects.Spot.MarketData.BinanceSymbolMinNotionalFilter()
+            NotionalFilter = new Binance.Net.Objects.Models.Spot.BinanceSymbolMinNotionalFilter()
             {
                 FilterType = binanceSymbol.MinNotionalFilter.FilterType,
                 MinNotional = binanceSymbol.MinNotionalFilter.MinNotional

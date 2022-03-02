@@ -182,7 +182,7 @@ namespace ImMillionaire.Brain.Core
 
             lock (_orderLock)
             {
-                if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, quantity, price, TimeInForce.GoodTillCancel, out Order order))
+                if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, quantity, price, TimeInForce.GoodTillCanceled, out Order order))
                 {
                     PlacedOrder = order;
                     CheckBuyWasExecuted(Bot.WaitSecondsBeforeCancelOrder);
@@ -207,7 +207,7 @@ namespace ImMillionaire.Brain.Core
             }
 
             decimal newPrice = PlacedOrder.Price * (1m + percentage / 100);
-            if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, quantity, newPrice, TimeInForce.GoodTillCancel, out Order order))
+            if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, quantity, newPrice, TimeInForce.GoodTillCanceled, out Order order))
             {
                 PlacedOrder = order;
                 Logger.LogWarning("place sell at: {0}", order.Price);

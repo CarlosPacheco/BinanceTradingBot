@@ -5,7 +5,7 @@ namespace ImMillionaire.Core
 {
     public class Candlestick : Candle
     {
-        public Candlestick(IBinanceKline binanceKline) : base(binanceKline.OpenTime, binanceKline.Open, binanceKline.High, binanceKline.Low, binanceKline.Close, binanceKline.BaseVolume)
+        public Candlestick(IBinanceKline binanceKline) : base(binanceKline.OpenTime, binanceKline.OpenPrice, binanceKline.HighPrice, binanceKline.LowPrice, binanceKline.ClosePrice, binanceKline.Volume)
         {
         }
     }

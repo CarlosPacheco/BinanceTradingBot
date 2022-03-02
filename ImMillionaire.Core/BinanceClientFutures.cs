@@ -1,44 +1,50 @@
 ﻿using Binance.Net.Enums;
 using Binance.Net.Interfaces;
-using Binance.Net.Objects.Futures.FuturesData;
-using Binance.Net.Objects.Futures.MarketData;
-using Binance.Net.Objects.Futures.MarketStream;
-using Binance.Net.Objects.Futures.UserStream;
+using Binance.Net.Interfaces.Clients;
+using Binance.Net.Interfaces.Clients.UsdFuturesApi;
+using Binance.Net.Objects.Models.Futures;
+using Binance.Net.Objects.Models.Futures.Socket;
 using CryptoExchange.Net.Objects;
 using CryptoExchange.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Trady.Core.Infrastructure;
 
 namespace ImMillionaire.Core
 {
     public class BinanceClientFutures : BinanceClientBase, IBinanceClient
     {
-        public BinanceClientFutures(IBinanceSocketClient socketClient, Binance.Net.Interfaces.IBinanceClient client, ILogger<BinanceClientFutures> logger) : base(socketClient, client, logger)
+        public IBinanceSocketClientUsdFuturesStreams Streams { get; private set; }
+        public IBinanceClientUsdFuturesApiExchangeData ExchangeData { get; private set; }
+        public IBinanceClientUsdFuturesApiAccount UserStream { get; private set; }
+
+        public BinanceClientFutures(IBinanceSocketClient socketClient, Binance.Net.Interfaces.Clients.IBinanceClient client, ILogger<BinanceClientFutures> logger) : base(socketClient, client, logger)
         {
-            Market = Client.FuturesUsdt.Market;
-            UserStream = Client.FuturesUsdt.UserStream;
-            BinanceSocketClientBase = SocketClient.FuturesUsdt;
+            ExchangeData = Client.UsdFuturesApi.ExchangeData;
+            UserStream = Client.UsdFuturesApi.Account;
+            Streams = SocketClient.UsdFuturesStreams;
         }
 
         public void StartSocketConnections(string symbol, Action<EventOrderBook> eventOrderBook, Action<Order> orderUpdate)
         {
-            BinanceFuturesSymbol binanceSymbol = Client.FuturesUsdt.System.GetExchangeInfoAsync().Result.Data.Symbols.FirstOrDefault(x => x.Name == symbol);
+            BinanceFuturesSymbol binanceSymbol = Client.UsdFuturesApi.ExchangeData.GetExchangeInfoAsync().Result.Data.Symbols.FirstOrDefault(x => x.Name == symbol);
             if (binanceSymbol == null) throw new Exception("Symbol don't exist!");
             BinanceSymbol = new AccountBinanceSymbol(binanceSymbol);
             Logger.LogInformation("BinanceSymbol: {0}", BinanceSymbol.Name);
 
             SubscribeToBookTickerUpdates(eventOrderBook);
-            GetListenKey();
+            GetListenKey(UserStream.StartUserStreamAsync());
             SubscribeToUserDataUpdates(orderUpdate);
-            KeepAliveListenKey();
+            KeepAliveListenKey(UserStream.KeepAliveUserStreamAsync(listenKey), UserStream.StartUserStreamAsync());
         }
 
-        public bool TryPlaceOrder(OrderSide side, OrderType type, decimal quantity, decimal price, TimeInForce timeInForce, out Order order)
+        public bool TryPlaceOrder(OrderSide side, OrderType orderType, decimal quantity, decimal price, TimeInForce timeInForce, out Order order)
         {
             order = null;
-            WebCallResult<BinanceFuturesPlacedOrder> orderRequest = Client.FuturesUsdt.Order.PlaceOrderAsync(BinanceSymbol.Name, side, type, quantity, PositionSide.Both, timeInForce, null, price).Result;
+            WebCallResult<BinanceFuturesPlacedOrder> orderRequest = Client.UsdFuturesApi.Trading.PlaceOrderAsync(BinanceSymbol.Name, side, GetOrderType(orderType), quantity, price, PositionSide.Both, timeInForce).Result;
             if (!orderRequest.Success)
             {
                 Logger.LogCritical("{0}", orderRequest.Error?.Message);
@@ -49,9 +55,9 @@ namespace ImMillionaire.Core
             return true;
         }
 
-        public async Task<(bool IsSucess, Order Order)> TryPlaceOrderAsync(OrderSide side, OrderType type, decimal quantity, decimal price, TimeInForce timeInForce)
+        public async Task<(bool IsSucess, Order Order)> TryPlaceOrderAsync(OrderSide side, OrderType orderType, decimal quantity, decimal price, TimeInForce timeInForce)
         {
-            WebCallResult<BinanceFuturesPlacedOrder> orderRequest = await Client.FuturesUsdt.Order.PlaceOrderAsync(BinanceSymbol.Name, side, type, quantity, PositionSide.Both, timeInForce, null, price);
+            WebCallResult<BinanceFuturesPlacedOrder> orderRequest = await Client.UsdFuturesApi.Trading.PlaceOrderAsync(BinanceSymbol.Name, side, GetOrderType(orderType), quantity, price, PositionSide.Both, timeInForce);
             if (!orderRequest.Success)
             {
                 Logger.LogWarning($"error place {side} at: {price}");
@@ -65,7 +71,7 @@ namespace ImMillionaire.Core
         public bool TryGetOrder(long orderId, out Order order)
         {
             order = null;
-            WebCallResult<BinanceFuturesOrder> orderRequest = Client.FuturesUsdt.Order.GetOrderAsync(BinanceSymbol.Name, orderId).Result;
+            WebCallResult<BinanceFuturesOrder> orderRequest = Client.UsdFuturesApi.Trading.GetOrderAsync(BinanceSymbol.Name, orderId).Result;
             if (!orderRequest.Success)
             {
                 Logger.LogCritical("{0}", orderRequest.Error?.Message);
@@ -78,12 +84,12 @@ namespace ImMillionaire.Core
 
         public bool CancelOrder(long orderId)
         {
-            return Client.FuturesUsdt.Order.CancelOrderAsync(BinanceSymbol.Name, orderId).Result.Success;
+            return Client.UsdFuturesApi.Trading.CancelOrderAsync(BinanceSymbol.Name, orderId).Result.Success;
         }
 
         public async Task<bool> CancelOrderAsync(long orderId)
         {
-            return (await Client.FuturesUsdt.Order.CancelOrderAsync(BinanceSymbol.Name, orderId)).Success;
+            return (await Client.UsdFuturesApi.Trading.CancelOrderAsync(BinanceSymbol.Name, orderId)).Success;
         }
 
         private async void SubscribeToUserDataUpdates(Action<Order> orderUpdate)
@@ -91,9 +97,9 @@ namespace ImMillionaire.Core
             if (string.IsNullOrWhiteSpace(listenKey))
             {
                 Logger.LogCritical("ListenKey can't be null, maybe you have Api key Restrict access to trusted IPs only enabled");
-                GetListenKey();
+                GetListenKey(UserStream.StartUserStreamAsync());
             }
-            CallResult<UpdateSubscription> successAccount = await SocketClient.FuturesUsdt.SubscribeToUserDataUpdatesAsync(listenKey,
+            CallResult<UpdateSubscription> successAccount = await Streams.SubscribeToUserDataUpdatesAsync(listenKey,
             null, // onLeverageUpdate
             null, // onMarginUpdate
             null, // onAccountUpdate      
@@ -106,7 +112,7 @@ namespace ImMillionaire.Core
 
         private async void SubscribeToBookTickerUpdates(Action<EventOrderBook> eventOrderBook)
         {
-            CallResult<UpdateSubscription> success = await SocketClient.FuturesUsdt.SubscribeToBookTickerUpdatesAsync(BinanceSymbol.Name, (DataEvent<BinanceFuturesStreamBookPrice> dataEv) => eventOrderBook(new EventOrderBook(dataEv.Data.BestAskPrice, dataEv.Data.BestBidPrice)));
+            CallResult<UpdateSubscription> success = await Streams.SubscribeToBookTickerUpdatesAsync(BinanceSymbol.Name, (DataEvent<BinanceFuturesStreamBookPrice> dataEv) => eventOrderBook(new EventOrderBook(dataEv.Data.BestAskPrice, dataEv.Data.BestBidPrice)));
             if (!success.Success)
                 Logger.LogCritical("SubscribeToBookTickerUpdates {0}", success.Error?.Message);
         }
@@ -123,12 +129,12 @@ namespace ImMillionaire.Core
 
         public decimal GetFreeBalance(string asset)
         {
-            WebCallResult<BinanceFuturesAccountInfo> binanceAccount = Client.FuturesUsdt.Account.GetAccountInfoAsync().Result;
+            WebCallResult<BinanceFuturesAccountInfo> binanceAccount = Client.UsdFuturesApi.Account.GetAccountInfoAsync().Result;
             if (binanceAccount.Success)
             {
                 var currentTradingAsset = binanceAccount.Data.Assets.FirstOrDefault(x => x.Asset.ToLower() == asset.ToLower());
                 var currentTradingPosition = binanceAccount.Data.Positions.FirstOrDefault(x => x.Symbol == BinanceSymbol.Name);
-                return currentTradingAsset.MaxWithdrawAmount * currentTradingPosition.Leverage;
+                return currentTradingAsset.MaxWithdrawQuantity * currentTradingPosition.Leverage;
             }
             else
             {
@@ -136,6 +142,71 @@ namespace ImMillionaire.Core
             }
 
             return 0;
+        }
+
+        private FuturesOrderType GetOrderType(OrderType orderType)
+        {
+            switch (orderType)
+            {
+                case OrderType.Limit:
+                    return FuturesOrderType.Limit;
+                case OrderType.Market:
+                    return FuturesOrderType.Market;
+                case OrderType.StopLoss:
+                    return FuturesOrderType.Stop;
+                case OrderType.StopLossLimit:
+                    return FuturesOrderType.StopMarket;
+                case OrderType.TakeProfit:
+                    return FuturesOrderType.TakeProfit;
+                case OrderType.TakeProfitLimit:
+                    return FuturesOrderType.TakeProfitMarket;
+            }
+
+            return FuturesOrderType.Limit;
+        }
+
+        public long Ping()
+        {
+            return Client.UsdFuturesApi.ExchangeData.PingAsync().Result.Data;
+        }
+
+        public IList<IOhlcv> GetKlines(KlineInterval klineInterval)
+        {
+            WebCallResult<IEnumerable<IBinanceKline>> klines = ExchangeData.GetKlinesAsync(BinanceSymbol.Name, klineInterval).Result;
+            if (klines.Success)
+            {
+                return klines.Data.Select(k => new Candlestick(k)).ToList<IOhlcv>();
+            }
+            else
+            {
+                Logger.LogCritical("{0}", klines.Error?.Message);
+            }
+
+            return null;
+        }
+
+        public async void SubscribeToKlineUpdates(IList<IOhlcv> candlestick, KlineInterval interval, Action<IList<IOhlcv>, Candlestick> calculateIndicators)
+        {
+            CallResult<UpdateSubscription> successKline = await Streams.SubscribeToKlineUpdatesAsync(BinanceSymbol.Name, interval, (DataEvent<IBinanceStreamKlineData> dataEv) =>
+            {
+                Candlestick candle = new Candlestick(dataEv.Data.Data);
+                candlestick.Add(candle);
+
+                calculateIndicators(candlestick, candle);
+
+                if (!dataEv.Data.Data.Final)
+                {
+                    candlestick.Remove(candle);
+                }
+            });
+
+            if (!successKline.Success)
+                Logger.LogCritical("SubscribeToKlineUpdates {0}", successKline.Error?.Message);
+        }
+
+        public void StopListenKey()
+        {
+            StopListenKey(UserStream.StopUserStreamAsync(listenKey));
         }
     }
 }

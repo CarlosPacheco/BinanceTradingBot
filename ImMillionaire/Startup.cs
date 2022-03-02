@@ -1,8 +1,7 @@
-﻿using Binance.Net;
+﻿using Binance.Net.Clients;
 using Binance.Net.Enums;
-using Binance.Net.Interfaces;
+using Binance.Net.Interfaces.Clients;
 using Binance.Net.Objects;
-using Binance.Net.Objects.Spot;
 using CryptoExchange.Net.Authentication;
 using ImMillionaire.Brain;
 using ImMillionaire.Brain.BotTrade;
@@ -14,8 +13,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -28,7 +25,7 @@ namespace ImMillionaire
             services.AddSingleton(config => Configuration);
             // IoC Logger 
             services.AddSingleton(Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(Configuration).CreateLogger());
-            services.AddSingleton<TextWriterLogger>();
+
             ConfigOptions config = Configuration.GetSection(ConfigOptions.Position).Get<ConfigOptions>();
 
             // Add functionality to inject IOptions<T>
@@ -46,17 +43,28 @@ namespace ImMillionaire
                  ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey),
                  ReconnectInterval = TimeSpan.FromSeconds(1),
 #if RELEASE
-                 LogVerbosity = CryptoExchange.Net.Logging.LogVerbosity.Error,
+                LogLevel = LogLevel.Trace
 #endif
              }));
 
-            services.AddTransient<Binance.Net.Interfaces.IBinanceClient>(serviceProvider =>
+            services.AddTransient<Binance.Net.Interfaces.Clients.IBinanceClient>(serviceProvider =>
             new BinanceClient(new BinanceClientOptions()
             {
-                ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey),
-                TradeRulesBehaviour = TradeRulesBehaviour.AutoComply,
+                ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey), 
+                SpotApiOptions = new BinanceApiClientOptions
+                {
+                    TradeRulesBehaviour = TradeRulesBehaviour.AutoComply,
+                    BaseAddress = BinanceApiAddresses.Default.RestClientAddress,
+                    AutoTimestamp = true
+                },
+                UsdFuturesApiOptions = new BinanceApiClientOptions
+                {
+                    TradeRulesBehaviour = TradeRulesBehaviour.AutoComply,
+                    BaseAddress = BinanceApiAddresses.Default.UsdFuturesRestClientAddress,
+                    AutoTimestamp = true,
+                },
 #if RELEASE
-                LogVerbosity = CryptoExchange.Net.Logging.LogVerbosity.Error,
+                LogLevel = LogLevel.Trace
 #endif
             }));
 

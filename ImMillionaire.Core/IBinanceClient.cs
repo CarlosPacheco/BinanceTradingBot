@@ -1,6 +1,4 @@
 ﻿using Binance.Net.Enums;
-using Binance.Net.Interfaces.SocketSubClient;
-using Binance.Net.Interfaces.SubClients;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -16,17 +14,11 @@ namespace ImMillionaire.Core
 
         AccountBinanceSymbol GetAccountBinanceSymbol();
 
-        IBinanceClientMarket Market { get; }
-
-        IBinanceClientUserStream UserStream { get; }
-
-        IBinanceSocketClientBase BinanceSocketClientBase { get; }
-
         IList<IOhlcv> GetKlines(KlineInterval klineInterval);
 
-        bool TryPlaceOrder(OrderSide side, OrderType type, decimal quantity, decimal price, TimeInForce timeInForce, out Order order);
+        bool TryPlaceOrder(OrderSide side, OrderType orderType, decimal quantity, decimal price, TimeInForce timeInForce, out Order order);
 
-        Task<(bool IsSucess, Order Order)> TryPlaceOrderAsync(OrderSide side, OrderType type, decimal quantity, decimal price, TimeInForce timeInForce);
+        Task<(bool IsSucess, Order Order)> TryPlaceOrderAsync(OrderSide side, OrderType orderType, decimal quantity, decimal price, TimeInForce timeInForce);
 
         bool TryGetOrder(long orderId, out Order order);
 

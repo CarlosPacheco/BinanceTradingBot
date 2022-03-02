@@ -87,7 +87,7 @@ namespace ImMillionaire.Brain
             decimal newPrice = PlacedOrder.Price * (1m + percentage / 100);
             try
             {
-                if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, quantity, newPrice, TimeInForce.GoodTillCancel, out Order order))
+                if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, quantity, newPrice, TimeInForce.GoodTillCanceled, out Order order))
                 {
                     PlacedOrder = order;
                     CheckBuyWasExecuted(Bot.WaitSecondsBeforeCancelOrder);

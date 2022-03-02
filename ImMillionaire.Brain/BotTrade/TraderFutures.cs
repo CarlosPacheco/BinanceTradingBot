@@ -131,7 +131,7 @@ namespace ImMillionaire.Brain
 
                     decimal amount = freeBalance / price;
 
-                    if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, amount, price, TimeInForce.GoodTillCancel, out Order order))
+                    if (BinanceClient.TryPlaceOrder(OrderSide.Buy, OrderType.Limit, amount, price, TimeInForce.GoodTillCanceled, out Order order))
                     {
                         PlacedOrder = order;
                         CheckBuyWasExecuted();
@@ -154,7 +154,7 @@ namespace ImMillionaire.Brain
 
             try
             {
-                if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, amount, newPrice, TimeInForce.GoodTillCancel, out Order order))
+                if (BinanceClient.TryPlaceOrder(OrderSide.Sell, OrderType.Limit, amount, newPrice, TimeInForce.GoodTillCanceled, out Order order))
                 {
                     Logger.LogWarning("place sell at: {0}", newPrice);
                 }

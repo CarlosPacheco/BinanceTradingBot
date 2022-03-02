@@ -1,12 +1,22 @@
 ﻿using Binance.Net.Enums;
-using Binance.Net.Objects.Futures.FuturesData;
-using Binance.Net.Objects.Futures.UserStream;
-using Binance.Net.Objects.Spot.SpotData;
-using Binance.Net.Objects.Spot.UserStream;
+using Binance.Net.Objects.Models.Futures;
+using Binance.Net.Objects.Models.Futures.Socket;
+using Binance.Net.Objects.Models.Spot;
+using Binance.Net.Objects.Models.Spot.Socket;
 using System;
 
 namespace ImMillionaire.Core
 {
+    public enum OrderType
+    {
+        Limit,
+        Market,
+        StopLoss,
+        StopLossLimit,
+        TakeProfit,
+        TakeProfitLimit
+    }
+
     public class Order
     {
         /// <summary>
@@ -47,7 +57,7 @@ namespace ImMillionaire.Core
         /// <summary>
         /// Cummulative amount
         /// </summary>
-        public decimal QuoteQuantityFilled { get; set; }
+        public decimal? QuoteQuantityFilled { get; set; }
 
         /// <summary>
         /// The currently executed quantity of the order
@@ -98,12 +108,54 @@ namespace ImMillionaire.Core
         {
         }
 
+        private OrderType GetOrderType(SpotOrderType orderType)
+        {
+            switch (orderType)
+            {
+                case SpotOrderType.Limit:
+                    return OrderType.Limit;
+                case SpotOrderType.Market:
+                    return OrderType.Market;
+                case SpotOrderType.StopLoss:
+                    return OrderType.StopLoss;
+                case SpotOrderType.StopLossLimit:
+                    return OrderType.StopLossLimit;
+                case SpotOrderType.TakeProfit:
+                    return OrderType.TakeProfit;
+                case SpotOrderType.TakeProfitLimit:
+                    return OrderType.TakeProfitLimit;
+            }
+
+            return OrderType.Limit;
+        }
+
+        private OrderType GetOrderType(FuturesOrderType orderType)
+        {
+            switch (orderType)
+            {
+                case FuturesOrderType.Limit:
+                    return OrderType.Limit;
+                case FuturesOrderType.Market:
+                    return OrderType.Market;
+                case FuturesOrderType.Stop:
+                    return OrderType.StopLoss;
+                case FuturesOrderType.StopMarket:
+                    return OrderType.StopLossLimit;
+                case FuturesOrderType.TakeProfit:
+                    return OrderType.TakeProfit;
+                case FuturesOrderType.TakeProfitMarket:
+                    return OrderType.TakeProfitLimit;
+            }
+
+            return OrderType.Limit;
+        }
+
         public Order(BinanceOrder binanceOrder)
         {
             CreateTime = binanceOrder.CreateTime;
             Side = binanceOrder.Side;
             StopPrice = binanceOrder.StopPrice;
-            Type = binanceOrder.Type;
+            Type = GetOrderType(binanceOrder.Type);
             TimeInForce = binanceOrder.TimeInForce;
             Status = binanceOrder.Status;
             QuoteQuantity = binanceOrder.QuoteQuantity;
@@ -113,7 +165,7 @@ namespace ImMillionaire.Core
             Price = binanceOrder.Price;
             OriginalClientOrderId = binanceOrder.OriginalClientOrderId;
             ClientOrderId = binanceOrder.ClientOrderId;
-            OrderId = binanceOrder.OrderId;
+            OrderId = binanceOrder.Id;
             Symbol = binanceOrder.Symbol;
         }
 
@@ -122,7 +174,7 @@ namespace ImMillionaire.Core
             CreateTime = binanceOrder.CreateTime;
             Side = binanceOrder.Side;
             StopPrice = binanceOrder.StopPrice;
-            Type = binanceOrder.Type;
+            Type = GetOrderType(binanceOrder.Type);
             TimeInForce = binanceOrder.TimeInForce;
             Status = binanceOrder.Status;
             QuoteQuantity = binanceOrder.QuoteQuantity;
@@ -132,7 +184,7 @@ namespace ImMillionaire.Core
             Price = binanceOrder.Price;
             OriginalClientOrderId = binanceOrder.OriginalClientOrderId;
             ClientOrderId = binanceOrder.ClientOrderId;
-            OrderId = binanceOrder.OrderId;
+            OrderId = binanceOrder.Id;
             Symbol = binanceOrder.Symbol;
         }
 
@@ -141,7 +193,7 @@ namespace ImMillionaire.Core
             CreateTime = binanceOrder.CreateTime;
             Side = binanceOrder.Side;
             StopPrice = binanceOrder.StopPrice;
-            Type = binanceOrder.Type;
+            Type = GetOrderType(binanceOrder.Type);
             TimeInForce = binanceOrder.TimeInForce;
             Status = binanceOrder.Status;
             QuoteQuantity = binanceOrder.QuoteQuantity;
@@ -151,10 +203,10 @@ namespace ImMillionaire.Core
             Price = binanceOrder.Price;
             OriginalClientOrderId = binanceOrder.OriginalClientOrderId;
             ClientOrderId = binanceOrder.ClientOrderId;
-            OrderId = binanceOrder.OrderId;
+            OrderId = binanceOrder.Id;
             Symbol = binanceOrder.Symbol;
-            CommissionAsset = binanceOrder.CommissionAsset;
-            Commission = binanceOrder.Commission;
+            CommissionAsset = binanceOrder.FeeAsset;
+            Commission = binanceOrder.Fee;
         }
 
         public Order(BinanceFuturesStreamOrderUpdateData binanceOrder)
@@ -162,7 +214,7 @@ namespace ImMillionaire.Core
             CreateTime = binanceOrder.UpdateTime;
             Side = binanceOrder.Side;
             StopPrice = binanceOrder.StopPrice;
-            Type = binanceOrder.Type;
+            Type = GetOrderType(binanceOrder.Type);
             TimeInForce = binanceOrder.TimeInForce;
             Status = binanceOrder.Status;
             QuantityFilled = binanceOrder.AccumulatedQuantityOfFilledTrades;
@@ -171,16 +223,16 @@ namespace ImMillionaire.Core
             ClientOrderId = binanceOrder.ClientOrderId;
             OrderId = binanceOrder.OrderId;
             Symbol = binanceOrder.Symbol;
-            CommissionAsset = binanceOrder.CommissionAsset;
-            Commission = binanceOrder.Commission;
+            CommissionAsset = binanceOrder.FeeAsset;
+            Commission = binanceOrder.Fee;
         }
 
         public Order(BinanceFuturesOrder binanceOrder)
         {
-            CreateTime = binanceOrder.CreatedTime;
+            CreateTime = binanceOrder.CreateTime;
             Side = binanceOrder.Side;
             StopPrice = binanceOrder.StopPrice;
-            Type = binanceOrder.Type;
+            Type = GetOrderType(binanceOrder.Type);
             TimeInForce = binanceOrder.TimeInForce;
             Status = binanceOrder.Status;
             QuoteQuantity = binanceOrder.LastFilledQuantity;
@@ -190,7 +242,7 @@ namespace ImMillionaire.Core
             Price = binanceOrder.Price;
             OriginalClientOrderId = binanceOrder.ClientOrderId;
             ClientOrderId = binanceOrder.ClientOrderId;
-            OrderId = binanceOrder.OrderId;
+            OrderId = binanceOrder.Id;
             Symbol = binanceOrder.Symbol;
         }
 
@@ -199,7 +251,7 @@ namespace ImMillionaire.Core
             CreateTime = binanceOrder.UpdateTime;
             Side = binanceOrder.Side;
             StopPrice = binanceOrder.StopPrice;
-            Type = binanceOrder.Type;
+            Type = GetOrderType(binanceOrder.Type);
             TimeInForce = binanceOrder.TimeInForce;
             Status = binanceOrder.Status;
             QuoteQuantity = binanceOrder.LastFilledQuantity;
@@ -209,7 +261,7 @@ namespace ImMillionaire.Core
             Price = binanceOrder.Price;
             OriginalClientOrderId = binanceOrder.ClientOrderId;
             ClientOrderId = binanceOrder.ClientOrderId;
-            OrderId = binanceOrder.OrderId;
+            OrderId = binanceOrder.Id;
             Symbol = binanceOrder.Symbol;
         }
     }
