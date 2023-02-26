@@ -104,7 +104,9 @@ namespace ImMillionaire.Core
             null, // onMarginUpdate
             null, // onAccountUpdate      
             (DataEvent<BinanceFuturesStreamOrderUpdate> dataEv) => orderUpdate(new Order(dataEv.Data.UpdateData)), // onOrderUpdate
-            null); // onListenKeyExpired
+            null, // onListenKeyExpired
+            null, // onStrategyUpdate
+            null); // onGridUpdate
 
             if (!successAccount.Success)
                 Logger.LogCritical("SubscribeToUserDataUpdates {0}", successAccount.Error?.Message);

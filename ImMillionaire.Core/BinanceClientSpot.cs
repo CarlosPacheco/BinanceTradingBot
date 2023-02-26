@@ -23,9 +23,9 @@ namespace ImMillionaire.Core
 
         public BinanceClientSpot(IBinanceSocketClient socketClient, Binance.Net.Interfaces.Clients.IBinanceClient client, ILogger<BinanceClientSpot> logger) : base(socketClient, client, logger)
         {
-            ExchangeData = Client.SpotApi.ExchangeData;
-            UserStream = Client.SpotApi.Account;
-            Streams = SocketClient.SpotStreams;
+            ExchangeData = client.SpotApi.ExchangeData;
+            UserStream = client.SpotApi.Account;
+            Streams = socketClient.SpotStreams;
         }
 
         public void StartSocketConnections(string symbol, Action<EventOrderBook> eventOrderBook, Action<Order> orderUpdate)

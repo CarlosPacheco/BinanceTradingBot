@@ -40,8 +40,7 @@ namespace ImMillionaire
             services.AddTransient<IBinanceSocketClient>(serviceProvider =>
              new BinanceSocketClient(new BinanceSocketClientOptions()
              {
-                 ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey),
-                 ReconnectInterval = TimeSpan.FromSeconds(1),
+                 ApiCredentials = new BinanceApiCredentials(config.ApiKey, config.SecretKey),
 #if RELEASE
                 LogLevel = LogLevel.Trace
 #endif
@@ -50,12 +49,12 @@ namespace ImMillionaire
             services.AddTransient<Binance.Net.Interfaces.Clients.IBinanceClient>(serviceProvider =>
             new BinanceClient(new BinanceClientOptions()
             {
-                ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey), 
+                ApiCredentials = new BinanceApiCredentials(config.ApiKey, config.SecretKey), 
                 SpotApiOptions = new BinanceApiClientOptions
                 {
                     TradeRulesBehaviour = TradeRulesBehaviour.AutoComply,
                     BaseAddress = BinanceApiAddresses.Default.RestClientAddress,
-                    AutoTimestamp = true
+                    AutoTimestamp = true,
                 },
                 UsdFuturesApiOptions = new BinanceApiClientOptions
                 {
