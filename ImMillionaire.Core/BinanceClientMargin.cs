@@ -18,15 +18,15 @@ namespace ImMillionaire.Core
 {
     public class BinanceClientMargin : BinanceClientBase, IBinanceClient
     {
-        public IBinanceSocketClientSpotStreams Streams { get; }
-        public IBinanceClientSpotApiExchangeData ExchangeData { get; private set; }
-        public IBinanceClientSpotApiAccount UserStream { get; private set; }
+        public IBinanceSocketClientSpotApi Streams { get; }
+        public IBinanceRestClientSpotApiExchangeData ExchangeData { get; private set; }
+        public IBinanceRestClientSpotApiAccount UserStream { get; private set; }
 
-        public BinanceClientMargin(IBinanceSocketClient socketClient, Binance.Net.Interfaces.Clients.IBinanceClient client, ILogger<BinanceClientMargin> logger) : base(socketClient, client, logger)
+        public BinanceClientMargin(IBinanceSocketClient socketClient, IBinanceRestClient client, ILogger<BinanceClientMargin> logger) : base(socketClient, client, logger)
         {
             ExchangeData = Client.SpotApi.ExchangeData;
             UserStream = Client.SpotApi.Account;
-            Streams = SocketClient.SpotStreams;
+            Streams = SocketClient.SpotApi;
         }
 
         public void StartSocketConnections(string symbol, Action<EventOrderBook> eventOrderBook, Action<Order> orderUpdate)
@@ -108,7 +108,7 @@ namespace ImMillionaire.Core
                 GetListenKey(UserStream.StartUserStreamAsync());
             }
 
-            CallResult<UpdateSubscription> successAccount = await Streams.SubscribeToUserDataUpdatesAsync(listenKey,
+            CallResult<UpdateSubscription> successAccount = await Streams.Account.SubscribeToUserDataUpdatesAsync(listenKey,
             (DataEvent<BinanceStreamOrderUpdate> dataEv) => orderUpdate(new Order(dataEv.Data)), // Handle order update info data
             null, // Handler for OCO updates
             null, // Handler for position updates
@@ -120,7 +120,7 @@ namespace ImMillionaire.Core
 
         private async void SubscribeToOrderBookUpdates(Action<EventOrderBook> eventOrderBook)
         {
-            CallResult<UpdateSubscription> successDepth = await Streams.SubscribeToOrderBookUpdatesAsync(BinanceSymbol.Name, 1000, (DataEvent<IBinanceEventOrderBook> dataEv) =>
+            CallResult<UpdateSubscription> successDepth = await Streams.ExchangeData.SubscribeToOrderBookUpdatesAsync(BinanceSymbol.Name, 1000, (DataEvent<IBinanceEventOrderBook> dataEv) =>
             {
                 if (dataEv.Data.Asks.Any() && dataEv.Data.Bids.Any())
                 {
@@ -160,7 +160,7 @@ namespace ImMillionaire.Core
 
         public async void SubscribeToKlineUpdates(IList<IOhlcv> candlestick, KlineInterval interval, Action<IList<IOhlcv>, Candlestick> calculateIndicators)
         {
-            CallResult<UpdateSubscription> successKline = await Streams.SubscribeToKlineUpdatesAsync(BinanceSymbol.Name, interval, (DataEvent<IBinanceStreamKlineData> dataEv) =>
+            CallResult<UpdateSubscription> successKline = await Streams.ExchangeData.SubscribeToKlineUpdatesAsync(BinanceSymbol.Name, interval, (DataEvent<IBinanceStreamKlineData> dataEv) =>
             {
                 Candlestick candle = new Candlestick(dataEv.Data.Data);
                 candlestick.Add(candle);

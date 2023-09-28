@@ -13,7 +13,7 @@ namespace ImMillionaire.Core
 
         protected IBinanceSocketClient SocketClient { get; }
 
-        protected Binance.Net.Interfaces.Clients.IBinanceClient Client { get; }
+        protected IBinanceRestClient Client { get; }
 
         protected CancellationTokenSource tokenSource = new CancellationTokenSource();
 
@@ -23,7 +23,7 @@ namespace ImMillionaire.Core
 
         public decimal GetCurrentTradePrice { get; set; }
 
-        public BinanceClientBase(IBinanceSocketClient socketClient, Binance.Net.Interfaces.Clients.IBinanceClient client, ILogger<BinanceClientBase> logger)
+        public BinanceClientBase(IBinanceSocketClient socketClient, IBinanceRestClient client, ILogger<BinanceClientBase> logger)
         {
             SocketClient = socketClient;
             Client = client;

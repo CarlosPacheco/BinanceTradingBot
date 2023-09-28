@@ -1,7 +1,6 @@
 ﻿using Binance.Net.Clients;
 using Binance.Net.Enums;
 using Binance.Net.Interfaces.Clients;
-using Binance.Net.Objects;
 using CryptoExchange.Net.Authentication;
 using ImMillionaire.Brain;
 using ImMillionaire.Brain.BotTrade;
@@ -12,7 +11,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -38,33 +36,22 @@ namespace ImMillionaire
             services.AddSingleton<IBinanceClientFactory, BinanceClientFactory>();
 
             services.AddTransient<IBinanceSocketClient>(serviceProvider =>
-             new BinanceSocketClient(new BinanceSocketClientOptions()
+             new BinanceSocketClient(options =>
              {
-                 ApiCredentials = new BinanceApiCredentials(config.ApiKey, config.SecretKey),
-#if RELEASE
-                LogLevel = LogLevel.Trace
-#endif
+                 options.ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey);
              }));
 
-            services.AddTransient<Binance.Net.Interfaces.Clients.IBinanceClient>(serviceProvider =>
-            new BinanceClient(new BinanceClientOptions()
+            services.AddTransient<IBinanceRestClient>(serviceProvider =>
+            new BinanceRestClient(options =>
             {
-                ApiCredentials = new BinanceApiCredentials(config.ApiKey, config.SecretKey), 
-                SpotApiOptions = new BinanceApiClientOptions
-                {
-                    TradeRulesBehaviour = TradeRulesBehaviour.AutoComply,
-                    BaseAddress = BinanceApiAddresses.Default.RestClientAddress,
-                    AutoTimestamp = true,
-                },
-                UsdFuturesApiOptions = new BinanceApiClientOptions
-                {
-                    TradeRulesBehaviour = TradeRulesBehaviour.AutoComply,
-                    BaseAddress = BinanceApiAddresses.Default.UsdFuturesRestClientAddress,
-                    AutoTimestamp = true,
-                },
-#if RELEASE
-                LogLevel = LogLevel.Trace
-#endif
+                options.ApiCredentials = new ApiCredentials(config.ApiKey, config.SecretKey);
+                options.Environment = Binance.Net.BinanceEnvironment.Live;
+
+                options.SpotOptions.TradeRulesBehaviour = TradeRulesBehaviour.AutoComply;
+                options.SpotOptions.AutoTimestamp = true;
+                options.UsdFuturesOptions.TradeRulesBehaviour = TradeRulesBehaviour.AutoComply;
+                options.UsdFuturesOptions.AutoTimestamp = true;
+                
             }));
 
             services.AddTransient<IBotTrade, MyBotTrade>();

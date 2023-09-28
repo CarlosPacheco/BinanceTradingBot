@@ -17,15 +17,15 @@ namespace ImMillionaire.Core
 {
     public class BinanceClientFutures : BinanceClientBase, IBinanceClient
     {
-        public IBinanceSocketClientUsdFuturesStreams Streams { get; private set; }
-        public IBinanceClientUsdFuturesApiExchangeData ExchangeData { get; private set; }
-        public IBinanceClientUsdFuturesApiAccount UserStream { get; private set; }
+        public IBinanceSocketClientUsdFuturesApi Streams { get; private set; }
+        public IBinanceRestClientUsdFuturesApiExchangeData ExchangeData { get; private set; }
+        public IBinanceRestClientUsdFuturesApiAccount UserStream { get; private set; }
 
-        public BinanceClientFutures(IBinanceSocketClient socketClient, Binance.Net.Interfaces.Clients.IBinanceClient client, ILogger<BinanceClientFutures> logger) : base(socketClient, client, logger)
+        public BinanceClientFutures(IBinanceSocketClient socketClient, IBinanceRestClient client, ILogger<BinanceClientFutures> logger) : base(socketClient, client, logger)
         {
             ExchangeData = Client.UsdFuturesApi.ExchangeData;
             UserStream = Client.UsdFuturesApi.Account;
-            Streams = SocketClient.UsdFuturesStreams;
+            Streams = SocketClient.UsdFuturesApi;
         }
 
         public void StartSocketConnections(string symbol, Action<EventOrderBook> eventOrderBook, Action<Order> orderUpdate)
@@ -106,7 +106,9 @@ namespace ImMillionaire.Core
             (DataEvent<BinanceFuturesStreamOrderUpdate> dataEv) => orderUpdate(new Order(dataEv.Data.UpdateData)), // onOrderUpdate
             null, // onListenKeyExpired
             null, // onStrategyUpdate
-            null); // onGridUpdate
+            null, // onGridUpdate
+            null // onConditionalOrderTriggerRejectUpdate
+            );
 
             if (!successAccount.Success)
                 Logger.LogCritical("SubscribeToUserDataUpdates {0}", successAccount.Error?.Message);
