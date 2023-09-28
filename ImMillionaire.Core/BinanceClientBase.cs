@@ -1,4 +1,5 @@
 ﻿using Binance.Net.Interfaces.Clients;
+using Binance.Net.Objects;
 using CryptoExchange.Net.Objects;
 using Microsoft.Extensions.Logging;
 using System;
@@ -61,12 +62,12 @@ namespace ImMillionaire.Core
             return decimal.Round(price, CalculateDecimal(BinanceSymbol.PriceFilter.TickSize));
         }
 
-        protected void GetListenKey(Task<WebCallResult<string>> taskStartUser)
+        protected void GetListenKey(Task<CallResult<BinanceResponse<string>>> task)
         {
-            WebCallResult<string> result = taskStartUser.Result;
+            CallResult<BinanceResponse<string>> result = task.Result;
             if (result.Success)
             {
-                listenKey = result.Data;
+                listenKey = result.Data.Result;
             }
             else
             {
@@ -74,7 +75,7 @@ namespace ImMillionaire.Core
             }
         }
 
-        protected async void KeepAliveListenKey(Task<WebCallResult<object>> taskKeepAlive, Task<WebCallResult<string>> taskStartUser)
+        protected async void KeepAliveListenKey(Task<CallResult<BinanceResponse<object>>> taskKeepAlive, Task<CallResult<BinanceResponse<string>>> taskStartUser)
         {
             while (!tokenSource.IsCancellationRequested)
             {
@@ -94,7 +95,7 @@ namespace ImMillionaire.Core
             }
         }
 
-        public void StopListenKey(Task<WebCallResult<object>> taskStopUser)
+        protected void StopListenKey(Task<CallResult<BinanceResponse<object>>> taskStopUser)
         {
             if (!string.IsNullOrWhiteSpace(listenKey)) _ = taskStopUser;
         }

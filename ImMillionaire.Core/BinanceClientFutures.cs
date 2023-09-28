@@ -17,15 +17,15 @@ namespace ImMillionaire.Core
 {
     public class BinanceClientFutures : BinanceClientBase, IBinanceClient
     {
-        public IBinanceSocketClientUsdFuturesApi Streams { get; private set; }
+        public IBinanceSocketClientUsdFuturesApi Api { get; private set; }
         public IBinanceRestClientUsdFuturesApiExchangeData ExchangeData { get; private set; }
         public IBinanceRestClientUsdFuturesApiAccount UserStream { get; private set; }
 
         public BinanceClientFutures(IBinanceSocketClient socketClient, IBinanceRestClient client, ILogger<BinanceClientFutures> logger) : base(socketClient, client, logger)
         {
+            Api = SocketClient.UsdFuturesApi;
             ExchangeData = Client.UsdFuturesApi.ExchangeData;
             UserStream = Client.UsdFuturesApi.Account;
-            Streams = SocketClient.UsdFuturesApi;
         }
 
         public void StartSocketConnections(string symbol, Action<EventOrderBook> eventOrderBook, Action<Order> orderUpdate)
@@ -99,7 +99,7 @@ namespace ImMillionaire.Core
                 Logger.LogCritical("ListenKey can't be null, maybe you have Api key Restrict access to trusted IPs only enabled");
                 GetListenKey(UserStream.StartUserStreamAsync());
             }
-            CallResult<UpdateSubscription> successAccount = await Streams.SubscribeToUserDataUpdatesAsync(listenKey,
+            CallResult<UpdateSubscription> successAccount = await Api.SubscribeToUserDataUpdatesAsync(listenKey,
             null, // onLeverageUpdate
             null, // onMarginUpdate
             null, // onAccountUpdate      
@@ -116,7 +116,7 @@ namespace ImMillionaire.Core
 
         private async void SubscribeToBookTickerUpdates(Action<EventOrderBook> eventOrderBook)
         {
-            CallResult<UpdateSubscription> success = await Streams.SubscribeToBookTickerUpdatesAsync(BinanceSymbol.Name, (DataEvent<BinanceFuturesStreamBookPrice> dataEv) => eventOrderBook(new EventOrderBook(dataEv.Data.BestAskPrice, dataEv.Data.BestBidPrice)));
+            CallResult<UpdateSubscription> success = await Api.SubscribeToBookTickerUpdatesAsync(BinanceSymbol.Name, (DataEvent<BinanceFuturesStreamBookPrice> dataEv) => eventOrderBook(new EventOrderBook(dataEv.Data.BestAskPrice, dataEv.Data.BestBidPrice)));
             if (!success.Success)
                 Logger.LogCritical("SubscribeToBookTickerUpdates {0}", success.Error?.Message);
         }
@@ -191,7 +191,7 @@ namespace ImMillionaire.Core
 
         public async void SubscribeToKlineUpdates(IList<IOhlcv> candlestick, KlineInterval interval, Action<IList<IOhlcv>, Candlestick> calculateIndicators)
         {
-            CallResult<UpdateSubscription> successKline = await Streams.SubscribeToKlineUpdatesAsync(BinanceSymbol.Name, interval, (DataEvent<IBinanceStreamKlineData> dataEv) =>
+            CallResult<UpdateSubscription> successKline = await Api.SubscribeToKlineUpdatesAsync(BinanceSymbol.Name, interval, (DataEvent<IBinanceStreamKlineData> dataEv) =>
             {
                 Candlestick candle = new Candlestick(dataEv.Data.Data);
                 candlestick.Add(candle);
@@ -211,6 +211,44 @@ namespace ImMillionaire.Core
         public void StopListenKey()
         {
             StopListenKey(UserStream.StopUserStreamAsync(listenKey));
+        }
+
+        protected void GetListenKey(Task<WebCallResult<string>> taskStartUser)
+        {
+            WebCallResult<string> result = taskStartUser.Result;
+            if (result.Success)
+            {
+                listenKey = result.Data;
+            }
+            else
+            {
+                Logger.LogCritical("{0} - GetListenKey", result.Error?.Message);
+            }
+        }
+
+        protected async void KeepAliveListenKey(Task<WebCallResult<object>> taskKeepAlive, Task<WebCallResult<string>> taskStartUser)
+        {
+            while (!tokenSource.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(new TimeSpan(0, 30, 0), tokenSource.Token);
+
+                    if (!taskKeepAlive.Result.Success)
+                    {
+                        Logger.LogInformation("KeepAliveListenKey Fail execute GetListenKey");
+                        GetListenKey(taskStartUser);
+                    }
+                }
+                catch (Exception)
+                {
+                }
+            }
+        }
+
+        public void StopListenKey(Task<WebCallResult<object>> taskStopUser)
+        {
+            if (!string.IsNullOrWhiteSpace(listenKey)) _ = taskStopUser;
         }
     }
 }
