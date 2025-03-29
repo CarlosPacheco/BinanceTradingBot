@@ -62,12 +62,12 @@ namespace ImMillionaire.Core
             return decimal.Round(price, CalculateDecimal(BinanceSymbol.PriceFilter.TickSize));
         }
 
-        protected void GetListenKey(Task<CallResult<BinanceResponse<string>>> task)
+        protected void GetListenKey(Task<WebCallResult<string>> task)
         {
-            CallResult<BinanceResponse<string>> result = task.Result;
+            WebCallResult<string> result = task.Result;
             if (result.Success)
             {
-                listenKey = result.Data.Result;
+                listenKey = result.Data;
             }
             else
             {
@@ -75,7 +75,7 @@ namespace ImMillionaire.Core
             }
         }
 
-        protected async void KeepAliveListenKey(Task<CallResult<BinanceResponse<object>>> taskKeepAlive, Task<CallResult<BinanceResponse<string>>> taskStartUser)
+        protected async void KeepAliveListenKey(Task<WebCallResult> taskKeepAlive, Task<WebCallResult<string>> taskStartUser)
         {
             while (!tokenSource.IsCancellationRequested)
             {
@@ -95,7 +95,7 @@ namespace ImMillionaire.Core
             }
         }
 
-        protected void StopListenKey(Task<CallResult<BinanceResponse<object>>> taskStopUser)
+        protected void StopListenKey(Task<WebCallResult> taskStopUser)
         {
             if (!string.IsNullOrWhiteSpace(listenKey)) _ = taskStopUser;
         }

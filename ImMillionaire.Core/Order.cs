@@ -227,7 +227,7 @@ namespace ImMillionaire.Core
             Commission = binanceOrder.Fee;
         }
 
-        public Order(BinanceFuturesOrder binanceOrder)
+        public Order(BinanceUsdFuturesOrder binanceOrder)
         {
             CreateTime = binanceOrder.CreateTime;
             Side = binanceOrder.Side;
@@ -235,7 +235,7 @@ namespace ImMillionaire.Core
             Type = GetOrderType(binanceOrder.Type);
             TimeInForce = binanceOrder.TimeInForce;
             Status = binanceOrder.Status;
-            QuoteQuantity = binanceOrder.LastFilledQuantity;
+            QuoteQuantity = binanceOrder.Quantity;
             QuoteQuantityFilled = binanceOrder.QuoteQuantityFilled;
             QuantityFilled = binanceOrder.QuantityFilled;
             Quantity = binanceOrder.Quantity;
@@ -246,23 +246,5 @@ namespace ImMillionaire.Core
             Symbol = binanceOrder.Symbol;
         }
 
-        public Order(BinanceFuturesPlacedOrder binanceOrder)
-        {
-            CreateTime = binanceOrder.UpdateTime;
-            Side = binanceOrder.Side;
-            StopPrice = binanceOrder.StopPrice;
-            Type = GetOrderType(binanceOrder.Type);
-            TimeInForce = binanceOrder.TimeInForce;
-            Status = binanceOrder.Status;
-            QuoteQuantity = binanceOrder.LastFilledQuantity;
-            QuoteQuantityFilled = binanceOrder.QuoteQuantityFilled;
-            QuantityFilled = binanceOrder.QuantityFilled;
-            Quantity = binanceOrder.Quantity;
-            Price = binanceOrder.Price;
-            OriginalClientOrderId = binanceOrder.ClientOrderId;
-            ClientOrderId = binanceOrder.ClientOrderId;
-            OrderId = binanceOrder.Id;
-            Symbol = binanceOrder.Symbol;
-        }
     }
 }

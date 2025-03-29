@@ -2,12 +2,11 @@
 using Binance.Net.Interfaces;
 using Binance.Net.Interfaces.Clients;
 using Binance.Net.Interfaces.Clients.SpotApi;
-using Binance.Net.Objects;
 using Binance.Net.Objects.Models.Spot;
 using Binance.Net.Objects.Models.Spot.Margin;
 using Binance.Net.Objects.Models.Spot.Socket;
 using CryptoExchange.Net.Objects;
-using CryptoExchange.Net.Sockets;
+using CryptoExchange.Net.Objects.Sockets;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -19,20 +18,37 @@ namespace ImMillionaire.Core
 {
     public class BinanceClientMargin : BinanceClientBase, IBinanceClient
     {
-        public IBinanceSocketClientSpotApi Api { get; }
+        /// <summary>
+        /// Spot streams and requests
+        /// </summary>
+        public IBinanceSocketClientSpotApi SocketApi { get; }
+
+        /// <summary>
+        /// Endpoints related to retrieving market and system data
+        /// </summary>
         public IBinanceRestClientSpotApiExchangeData ExchangeData { get; private set; }
-        public IBinanceSocketClientSpotApiAccount UserStream { get; private set; }
+
+        /// <summary>
+        /// Endpoints related to account settings, info or actions
+        /// </summary>
+        public IBinanceRestClientSpotApiAccount Account { get; private set; }
+
+        /// <summary>
+        /// Endpoints related to orders and trades
+        /// </summary>
+        public IBinanceRestClientSpotApiTrading Trading { get; private set; }
 
         public BinanceClientMargin(IBinanceSocketClient socketClient, IBinanceRestClient client, ILogger<BinanceClientMargin> logger) : base(socketClient, client, logger)
         {
-            Api = SocketClient.SpotApi;
+            SocketApi = SocketClient.SpotApi;
             ExchangeData = Client.SpotApi.ExchangeData;
-            UserStream = Api.Account;
+            Account = Client.SpotApi.Account;
+            Trading = Client.SpotApi.Trading;
         }
 
         public void StartSocketConnections(string symbol, Action<EventOrderBook> eventOrderBook, Action<Order> orderUpdate)
         {
-            WebCallResult<BinanceExchangeInfo> exchangeInfo = Client.SpotApi.ExchangeData.GetExchangeInfoAsync().Result;
+            WebCallResult<BinanceExchangeInfo> exchangeInfo = ExchangeData.GetExchangeInfoAsync().Result;
             if (!exchangeInfo.Success)
             {
                 Logger.LogCritical("error exchangeInfo  {0}", exchangeInfo.Error?.Message);
@@ -44,15 +60,15 @@ namespace ImMillionaire.Core
             Logger.LogInformation("BinanceSymbol: {0}", BinanceSymbol.Name);
 
             SubscribeToOrderBookUpdates(eventOrderBook);
-            GetListenKey(UserStream.StartUserStreamAsync());
+            GetListenKey(Account.StartMarginUserStreamAsync());
             SubscribeToUserDataUpdates(orderUpdate);
-            KeepAliveListenKey(UserStream.KeepAliveUserStreamAsync(listenKey), UserStream.StartUserStreamAsync());
+            KeepAliveListenKey(Account.KeepAliveMarginUserStreamAsync(listenKey), Account.StartMarginUserStreamAsync());
         }
 
         public bool TryPlaceOrder(OrderSide side, OrderType orderType, decimal quantity, decimal price, TimeInForce timeInForce, out Order order)
         {
             order = null;
-            WebCallResult<BinancePlacedOrder> orderRequest = Client.SpotApi.Trading.PlaceMarginOrderAsync(BinanceSymbol.Name, side, GetOrderType(orderType), quantity, null, null, price, timeInForce).Result;
+            WebCallResult<BinancePlacedOrder> orderRequest = Trading.PlaceMarginOrderAsync(BinanceSymbol.Name, side, GetOrderType(orderType), quantity, null, null, price, timeInForce).Result;
             if (!orderRequest.Success)
             {
                 Logger.LogInformation("error place {0} at: {1}", side, price);
@@ -66,7 +82,7 @@ namespace ImMillionaire.Core
 
         public async Task<(bool IsSucess, Order Order)> TryPlaceOrderAsync(OrderSide side, OrderType orderType, decimal quantity, decimal price, TimeInForce timeInForce)
         {
-            WebCallResult<BinancePlacedOrder> orderRequest = await Client.SpotApi.Trading.PlaceMarginOrderAsync(BinanceSymbol.Name, side, GetOrderType(orderType), quantity, null, null, price, timeInForce);
+            WebCallResult<BinancePlacedOrder> orderRequest = await Trading.PlaceMarginOrderAsync(BinanceSymbol.Name, side, GetOrderType(orderType), quantity, null, null, price, timeInForce);
             if (!orderRequest.Success)
             {
                 Logger.LogInformation("error place {0} at: {1}", side, price);
@@ -80,7 +96,7 @@ namespace ImMillionaire.Core
         public bool TryGetOrder(long orderId, out Order order)
         {
             order = null;
-            WebCallResult<BinanceOrder> orderRequest = Client.SpotApi.Trading.GetMarginOrderAsync(BinanceSymbol.Name, orderId).Result;
+            WebCallResult<BinanceOrder> orderRequest = Trading.GetMarginOrderAsync(BinanceSymbol.Name, orderId).Result;
             if (!orderRequest.Success)
             {
                 Logger.LogCritical("{0}", orderRequest.Error?.Message);
@@ -93,12 +109,12 @@ namespace ImMillionaire.Core
 
         public bool CancelOrder(long orderId)
         {
-            return Client.SpotApi.Trading.CancelMarginOrderAsync(BinanceSymbol.Name, orderId).Result.Success;
+            return Trading.CancelMarginOrderAsync(BinanceSymbol.Name, orderId).Result.Success;
         }
 
         public async Task<bool> CancelOrderAsync(long orderId)
         {
-            return (await Client.SpotApi.Trading.CancelMarginOrderAsync(BinanceSymbol.Name, orderId)).Success;
+            return (await Trading.CancelMarginOrderAsync(BinanceSymbol.Name, orderId)).Success;
         }
 
         private async void SubscribeToUserDataUpdates(Action<Order> orderUpdate)
@@ -106,10 +122,10 @@ namespace ImMillionaire.Core
             if (string.IsNullOrWhiteSpace(listenKey))
             {
                 Logger.LogCritical("ListenKey can't be null, maybe you have Api key Restrict access to trusted IPs only enabled");
-                GetListenKey(UserStream.StartUserStreamAsync());
+                GetListenKey(Account.StartMarginUserStreamAsync());
             }
 
-            CallResult<UpdateSubscription> successAccount = await Api.Account.SubscribeToUserDataUpdatesAsync(listenKey,
+            CallResult<UpdateSubscription> successAccount = await SocketApi.Account.SubscribeToUserDataUpdatesAsync(listenKey,
             (DataEvent<BinanceStreamOrderUpdate> dataEv) => orderUpdate(new Order(dataEv.Data)), // Handle order update info data
             null, // Handler for OCO updates
             null, // Handler for position updates
@@ -121,7 +137,7 @@ namespace ImMillionaire.Core
 
         private async void SubscribeToOrderBookUpdates(Action<EventOrderBook> eventOrderBook)
         {
-            CallResult<UpdateSubscription> successDepth = await Api.ExchangeData.SubscribeToOrderBookUpdatesAsync(BinanceSymbol.Name, 1000, (DataEvent<IBinanceEventOrderBook> dataEv) =>
+            CallResult<UpdateSubscription> successDepth = await SocketApi.ExchangeData.SubscribeToOrderBookUpdatesAsync(BinanceSymbol.Name, 1000, (DataEvent<IBinanceEventOrderBook> dataEv) =>
             {
                 if (dataEv.Data.Asks.Any() && dataEv.Data.Bids.Any())
                 {
@@ -145,7 +161,7 @@ namespace ImMillionaire.Core
 
         public decimal GetFreeBalance(string asset)
         {
-            WebCallResult<BinanceMarginAccount> binanceMarginAccount = Client.SpotApi.Account.GetMarginAccountInfoAsync().Result;
+            WebCallResult<BinanceMarginAccount> binanceMarginAccount = Account.GetMarginAccountInfoAsync().Result;
             if (binanceMarginAccount.Success)
             {
                 var currentTradingAsset = binanceMarginAccount.Data.Balances.FirstOrDefault(x => x.Asset.ToLower() == asset.ToLower());
@@ -161,7 +177,7 @@ namespace ImMillionaire.Core
 
         public async void SubscribeToKlineUpdates(IList<IOhlcv> candlestick, KlineInterval interval, Action<IList<IOhlcv>, Candlestick> calculateIndicators)
         {
-            CallResult<UpdateSubscription> successKline = await Api.ExchangeData.SubscribeToKlineUpdatesAsync(BinanceSymbol.Name, interval, (DataEvent<IBinanceStreamKlineData> dataEv) =>
+            CallResult<UpdateSubscription> successKline = await SocketApi.ExchangeData.SubscribeToKlineUpdatesAsync(BinanceSymbol.Name, interval, (DataEvent<IBinanceStreamKlineData> dataEv) =>
             {
                 Candlestick candle = new Candlestick(dataEv.Data.Data);
                 candlestick.Add(candle);
@@ -195,7 +211,7 @@ namespace ImMillionaire.Core
 
         public long Ping()
         {
-            return Client.SpotApi.ExchangeData.PingAsync().Result.Data;
+            return ExchangeData.PingAsync().Result.Data;
         }
 
         private SpotOrderType GetOrderType(OrderType orderType)
@@ -221,7 +237,7 @@ namespace ImMillionaire.Core
 
         public void StopListenKey()
         {
-            StopListenKey(UserStream.StopUserStreamAsync(listenKey));
+            StopListenKey(Account.StopMarginUserStreamAsync(listenKey));
         }
     }
 }
